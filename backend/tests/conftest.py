@@ -18,16 +18,15 @@ Running:
 
 from __future__ import annotations
 
-import asyncio
 import os
 from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.domain.enums import ProjectRole, WorkspaceRole
 from app.domain.models import (
@@ -59,11 +58,6 @@ TEST_DATABASE_SYNC_URL = os.environ.get(
 # ─────────────────────────────────────────────────────────────
 
 
-@pytest.fixture(scope="session")
-def event_loop_policy():
-    return asyncio.DefaultEventLoopPolicy()
-
-
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     """Create async engine for test database."""
@@ -72,6 +66,7 @@ async def test_engine():
         TEST_DATABASE_URL,
         echo=False,
         connect_args=connect_args,
+        poolclass=NullPool,
     )
 
     async with engine.begin() as conn:
@@ -103,13 +98,14 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, Any]:
     without recreating the schema or truncating tables.
     """
     async with test_engine.connect() as connection:
-        await connection.begin()
+        trans = await connection.begin()
         session = AsyncSession(bind=connection, expire_on_commit=False)
         try:
             yield session
         finally:
             await session.close()
-            await connection.rollback()
+            if trans.is_active:
+                await trans.rollback()
 
 
 # ─────────────────────────────────────────────────────────────
