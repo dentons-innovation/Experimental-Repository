@@ -1,4 +1,10 @@
-import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes, type SelectHTMLAttributes, type ReactNode } from "react";
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type TextareaHTMLAttributes,
+  type SelectHTMLAttributes,
+  type ReactNode,
+} from "react";
 
 export interface FormFieldProps {
   label?: ReactNode;
@@ -25,7 +31,10 @@ export function FormField({
         <label className="input-label" htmlFor={htmlFor}>
           {label}
           {required && (
-            <span style={{ color: "var(--color-danger)", marginLeft: "4px" }} aria-hidden="true">
+            <span
+              style={{ color: "var(--color-danger)", marginLeft: "4px" }}
+              aria-hidden="true"
+            >
               *
             </span>
           )}
@@ -74,7 +83,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Input.displayName = "Input";
 
@@ -91,7 +100,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Textarea.displayName = "Textarea";
 
@@ -110,6 +119,6 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {children}
       </select>
     );
-  }
+  },
 );
 Select.displayName = "Select";

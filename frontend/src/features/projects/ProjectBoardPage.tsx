@@ -1,8 +1,8 @@
 import { useState, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ArrowLeft, Filter } from "lucide-react";
-import { projectsApi, tasksApi } from "@/api/fetchers";
+import { Plus, ArrowLeft, Filter, Edit2, Trash2 } from "lucide-react";
+import { projectsApi, tasksApi, workspacesApi } from "@/api/fetchers";
 import { queryKeys } from "@/api/queryKeys";
 import type { Task, TaskPriority, TaskStatus } from "@/types";
 import { TASK_STATUS_LABELS } from "@/types";
@@ -24,6 +24,7 @@ const COLUMNS: TaskStatus[] = ["todo", "in_progress", "in_review", "done"];
 
 export function ProjectBoardPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -32,10 +33,18 @@ export function ProjectBoardPage() {
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const isDraggingRef = useRef(false);
 
+  // Edit / Delete Project state
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [isDeleteProjectOpen, setIsDeleteProjectOpen] = useState(false);
+
+  // Create Issue state
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDesc, setTaskDesc] = useState("");
   const [taskPriority, setTaskPriority] = useState<TaskPriority>("medium");
   const [taskStatus, setTaskStatus] = useState<TaskStatus>("todo");
+  const [taskAssigneeId, setTaskAssigneeId] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const {
@@ -58,12 +67,19 @@ export function ProjectBoardPage() {
     enabled: !!projectId,
   });
 
+  const { data: members } = useQuery({
+    queryKey: queryKeys.workspaces.members(project?.workspace_id ?? ""),
+    queryFn: () => workspacesApi.listMembers(project!.workspace_id),
+    enabled: !!project?.workspace_id,
+  });
+
   const createTaskMutation = useMutation({
     mutationFn: (payload: {
       title: string;
       description?: string;
       priority: TaskPriority;
       status: TaskStatus;
+      assignee_id?: string;
     }) => tasksApi.create(projectId!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -74,6 +90,35 @@ export function ProjectBoardPage() {
       setTaskDesc("");
       setTaskPriority("medium");
       setTaskStatus("todo");
+      setTaskAssigneeId("");
+    },
+  });
+
+  const editProjectMutation = useMutation({
+    mutationFn: (payload: { name: string; description?: string }) =>
+      projectsApi.update(projectId!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.detail(projectId!),
+      });
+      if (project?.workspace_id) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.byWorkspace(project.workspace_id),
+        });
+      }
+      setIsEditProjectOpen(false);
+    },
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: () => projectsApi.delete(projectId!),
+    onSuccess: () => {
+      if (project?.workspace_id) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.byWorkspace(project.workspace_id),
+        });
+        navigate(`/workspaces/${project.workspace_id}`);
+      }
     },
   });
 
@@ -89,7 +134,7 @@ export function ProjectBoardPage() {
         queryKey: queryKeys.tasks.byProject(projectId!),
       });
       const previousTasks = queryClient.getQueryData(
-        queryKeys.tasks.byProject(projectId!)
+        queryKeys.tasks.byProject(projectId!),
       );
 
       queryClient.setQueryData(
@@ -99,10 +144,12 @@ export function ProjectBoardPage() {
           return {
             ...old,
             items: old.items.map((t) =>
-              t.id === task.id ? { ...t, status: newStatus, version: t.version + 1 } : t
+              t.id === task.id
+                ? { ...t, status: newStatus, version: t.version + 1 }
+                : t,
             ),
           };
-        }
+        },
       );
 
       return { previousTasks };
@@ -111,7 +158,7 @@ export function ProjectBoardPage() {
       if (context?.previousTasks) {
         queryClient.setQueryData(
           queryKeys.tasks.byProject(projectId!),
-          context.previousTasks
+          context.previousTasks,
         );
       }
     },
@@ -186,43 +233,86 @@ export function ProjectBoardPage() {
           <Link
             to={`/workspaces/${project.workspace_id}`}
             className="text-secondary"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px" }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "13px",
+            }}
           >
             <ArrowLeft size={14} /> Back
           </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              className="badge"
+          <div>
+            <h1 className="page-title">{project.name}</h1>
+            <div
               style={{
-                backgroundColor: "var(--color-surface-2)",
-                border: "1px solid var(--color-border)",
+                fontSize: "12px",
                 color: "var(--color-text-secondary)",
+                marginTop: "2px",
+                fontWeight: 500,
               }}
             >
               {project.slug.toUpperCase()}
-            </span>
-            <h1 className="page-title">{project.name}</h1>
+            </div>
+            {project.description && (
+              <p className="page-subtitle" style={{ marginTop: "4px" }}>
+                {project.description}
+              </p>
+            )}
           </div>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setIsCreateOpen(true)}
-        >
-          <Plus size={16} />
-          Create Issue
-        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setEditName(project.name);
+              setEditDesc(project.description || "");
+              setIsEditProjectOpen(true);
+            }}
+          >
+            <Edit2 size={13} /> Edit
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ color: "var(--color-danger)" }}
+            onClick={() => setIsDeleteProjectOpen(true)}
+          >
+            <Trash2 size={13} /> Delete
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus size={16} />
+            Create Issue
+          </button>
+        </div>
       </div>
 
       <div className="page-content">
-        {project.description && (
-          <p className="text-secondary mb-4" style={{ fontSize: "14px" }}>
-            {project.description}
-          </p>
-        )}
-
         {/* Filter Toolbar */}
-        <div className="card mb-6" style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--color-text-secondary)" }}>
+        <div
+          className="card mb-6"
+          style={{
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "13px",
+              color: "var(--color-text-secondary)",
+            }}
+          >
             <Filter size={14} />
             <span>Status:</span>
           </div>
@@ -261,9 +351,12 @@ export function ProjectBoardPage() {
               paddingBottom: "16px",
             }}
           >
-            {COLUMNS.filter((col) => statusFilter === "all" || statusFilter === col).map((col) => {
+            {COLUMNS.filter(
+              (col) => statusFilter === "all" || statusFilter === col,
+            ).map((col) => {
               const columnTasks = tasks.filter((t) => t.status === col);
-              const isDropTarget = dragOverColumn === col && draggedTaskId !== null;
+              const isDropTarget =
+                dragOverColumn === col && draggedTaskId !== null;
 
               return (
                 <div
@@ -272,17 +365,22 @@ export function ProjectBoardPage() {
                   onDragLeave={(e) => handleDragLeave(e, col)}
                   onDrop={(e) => handleDrop(e, col)}
                   style={{
-                    backgroundColor: isDropTarget ? "rgba(109, 107, 244, 0.08)" : "var(--color-surface)",
+                    backgroundColor: isDropTarget
+                      ? "rgba(109, 107, 244, 0.08)"
+                      : "var(--color-surface)",
                     borderRadius: "var(--radius-lg)",
                     border: isDropTarget
                       ? "2px dashed var(--color-brand)"
                       : "1px solid var(--color-border-subtle)",
-                    boxShadow: isDropTarget ? "0 0 16px var(--color-brand-glow)" : "none",
+                    boxShadow: isDropTarget
+                      ? "0 0 16px var(--color-brand-glow)"
+                      : "none",
                     padding: "16px",
                     minHeight: "480px",
                     display: "flex",
                     flexDirection: "column",
-                    transition: "background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease",
+                    transition:
+                      "background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease",
                   }}
                 >
                   {/* Column header */}
@@ -294,7 +392,14 @@ export function ProjectBoardPage() {
                       marginBottom: "12px",
                     }}
                   >
-                    <span style={{ fontWeight: 600, fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "13px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
                       {TASK_STATUS_LABELS[col]}
                     </span>
                     <span
@@ -312,7 +417,14 @@ export function ProjectBoardPage() {
                   </div>
 
                   {/* Task card list */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                      flex: 1,
+                    }}
+                  >
                     {columnTasks.length === 0 ? (
                       <div
                         style={{
@@ -339,7 +451,10 @@ export function ProjectBoardPage() {
                             onDragEnd={handleDragEnd}
                             onClick={(e) => {
                               if (isDraggingRef.current) return;
-                              if ((e.target as HTMLElement).tagName === "SELECT") return;
+                              if (
+                                (e.target as HTMLElement).tagName === "SELECT"
+                              )
+                                return;
                               setSelectedTaskId(task.id);
                             }}
                             style={{
@@ -349,34 +464,62 @@ export function ProjectBoardPage() {
                               gap: "10px",
                               cursor: isDragging ? "grabbing" : "grab",
                               opacity: isDragging ? 0.4 : 1,
-                              transform: isDragging ? "scale(0.98)" : "none",
-                              border: isDragging ? "2px dashed var(--color-brand)" : undefined,
-                              transition: "opacity 150ms ease, transform 150ms ease, border-color 150ms ease",
+                              border: isDragging
+                                ? "2px dashed var(--color-brand)"
+                                : undefined,
+                              transition:
+                                "opacity 150ms ease, border-color 150ms ease",
                               userSelect: "none",
                             }}
                           >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                              <span style={{ fontSize: "12px", color: "var(--color-text-secondary)", fontWeight: 500 }}>
-                                {project.slug.toUpperCase()}-{task.id.slice(0, 4)}
-                              </span>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-start",
+                                gap: "8px",
+                              }}
+                            >
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontWeight: 600,
+                                    fontSize: "14px",
+                                    lineHeight: "1.3",
+                                    color: "var(--color-text)",
+                                  }}
+                                >
+                                  {task.title}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "11px",
+                                    color: "var(--color-text-tertiary)",
+                                    marginTop: "3px",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {project.slug.toUpperCase()}-
+                                  {task.id.slice(0, 4)}
+                                </div>
+                              </div>
                               <TaskPriorityBadge priority={task.priority} />
                             </div>
 
-                            <div
-                              style={{
-                                fontWeight: 600,
-                                fontSize: "14px",
-                                lineHeight: "1.3",
-                                color: "var(--color-text)",
-                              }}
-                            >
-                              {task.title}
-                            </div>
-
                             {task.labels && task.labels.length > 0 && (
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: "4px",
+                                }}
+                              >
                                 {task.labels.map((l) => (
-                                  <LabelChip key={l.id} name={l.name} color={l.color} />
+                                  <LabelChip
+                                    key={l.id}
+                                    name={l.name}
+                                    color={l.color}
+                                  />
                                 ))}
                               </div>
                             )}
@@ -388,13 +531,18 @@ export function ProjectBoardPage() {
                                 alignItems: "center",
                                 marginTop: "4px",
                                 paddingTop: "8px",
-                                borderTop: "1px solid var(--color-border-subtle)",
+                                borderTop:
+                                  "1px solid var(--color-border-subtle)",
                               }}
                             >
                               <Avatar user={task.assignee} size="sm" />
                               <select
                                 className="input"
-                                style={{ padding: "4px 8px", fontSize: "12px", width: "auto" }}
+                                style={{
+                                  padding: "4px 8px",
+                                  fontSize: "12px",
+                                  width: "auto",
+                                }}
                                 value={task.status}
                                 onChange={(e) =>
                                   updateStatusMutation.mutate({
@@ -476,6 +624,7 @@ export function ProjectBoardPage() {
               description: taskDesc.trim() || undefined,
               priority: taskPriority,
               status: taskStatus,
+              assignee_id: taskAssigneeId || undefined,
             });
           }}
         >
@@ -491,7 +640,13 @@ export function ProjectBoardPage() {
             />
           </FormField>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "16px",
+            }}
+          >
             <FormField label="Status" htmlFor="taskStatusSelect">
               <Select
                 id="taskStatusSelect"
@@ -510,7 +665,9 @@ export function ProjectBoardPage() {
               <Select
                 id="taskPrioritySelect"
                 value={taskPriority}
-                onChange={(e) => setTaskPriority(e.target.value as TaskPriority)}
+                onChange={(e) =>
+                  setTaskPriority(e.target.value as TaskPriority)
+                }
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -519,6 +676,21 @@ export function ProjectBoardPage() {
               </Select>
             </FormField>
           </div>
+
+          <FormField label="Assignee" htmlFor="taskAssigneeSelect">
+            <Select
+              id="taskAssigneeSelect"
+              value={taskAssigneeId}
+              onChange={(e) => setTaskAssigneeId(e.target.value)}
+            >
+              <option value="">Unassigned</option>
+              {members?.map((m) => (
+                <option key={m.user.id} value={m.user.id}>
+                  {m.user.full_name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
           <FormField
             label="Description"
@@ -536,12 +708,114 @@ export function ProjectBoardPage() {
         </form>
       </Modal>
 
+      {/* Top-Level Edit Project Modal */}
+      <Modal
+        isOpen={isEditProjectOpen}
+        onClose={() => setIsEditProjectOpen(false)}
+        title="Edit Project"
+        description="Update project details and descriptions."
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsEditProjectOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="edit-project-form"
+              className="btn btn-primary"
+              disabled={editProjectMutation.isPending || !editName.trim()}
+            >
+              {editProjectMutation.isPending ? "Saving..." : "Save Changes"}
+            </button>
+          </>
+        }
+      >
+        <form
+          id="edit-project-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!editName.trim()) return;
+            editProjectMutation.mutate({
+              name: editName.trim(),
+              description: editDesc.trim() || undefined,
+            });
+          }}
+        >
+          <FormField label="Project Name" htmlFor="editProjectName" required>
+            <Input
+              id="editProjectName"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              required
+              autoFocus
+            />
+          </FormField>
+          <FormField label="Description" htmlFor="editProjectDesc">
+            <Textarea
+              id="editProjectDesc"
+              rows={3}
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+            />
+          </FormField>
+        </form>
+      </Modal>
+
+      {/* Delete Project Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteProjectOpen}
+        onClose={() => setIsDeleteProjectOpen(false)}
+        title="Delete Project"
+        description="Are you sure you want to delete this project? This will permanently delete all issues inside it."
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsDeleteProjectOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{
+                backgroundColor: "var(--color-danger)",
+                borderColor: "var(--color-danger)",
+              }}
+              disabled={deleteProjectMutation.isPending}
+              onClick={() => deleteProjectMutation.mutate()}
+            >
+              {deleteProjectMutation.isPending
+                ? "Deleting..."
+                : "Yes, Delete Project"}
+            </button>
+          </>
+        }
+      >
+        <p
+          style={{
+            fontSize: "14px",
+            color: "var(--color-text-secondary)",
+            lineHeight: 1.5,
+          }}
+        >
+          Project <strong>{project.name}</strong> will be permanently deleted
+          along with all its tasks and comments. This action cannot be undone.
+        </p>
+      </Modal>
+
       {/* Top-Level Issue Detail Modal */}
       <TaskDetailModal
         taskId={selectedTaskId}
         isOpen={Boolean(selectedTaskId)}
         onClose={() => setSelectedTaskId(null)}
         projectSlug={project.slug}
+        workspaceId={project.workspace_id}
       />
     </div>
   );

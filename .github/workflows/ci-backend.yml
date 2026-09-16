@@ -69,4 +69,4 @@ jobs:
       run: alembic upgrade head
 
     - name: Test (pytest)
-      run: pytest tests/unit tests/api -v --cov=app --cov-branch --cov-report=xml --cov-fail-under=85
+      run: pytest tests/ -v --cov=app --cov-branch --cov-report=xml --cov-fail-under=85

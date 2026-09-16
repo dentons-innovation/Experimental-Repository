@@ -23,7 +23,7 @@ export function Sidebar() {
       gsap.fromTo(
         sidebarRef.current,
         { x: -20, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" }
+        { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
       );
     }
   }, []);
@@ -35,8 +35,7 @@ export function Sidebar() {
   });
 
   const isActive = (path: string) =>
-    location.pathname === path ||
-    location.pathname.startsWith(path + "/");
+    location.pathname === path || location.pathname.startsWith(path + "/");
 
   const handleLogout = () => {
     logout();
@@ -103,7 +102,11 @@ export function Sidebar() {
           <div style={{ flex: 1, overflow: "hidden" }}>
             <div
               className="truncate"
-              style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--color-text)",
+              }}
             >
               {user?.full_name || user?.username || "User"}
             </div>
@@ -128,11 +131,14 @@ export function Sidebar() {
               transition: "color 0.15s ease, background 0.15s ease",
             }}
             onMouseOver={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "var(--color-danger)";
-              (e.currentTarget as HTMLElement).style.background = "rgba(239, 68, 68, 0.1)";
+              (e.currentTarget as HTMLElement).style.color =
+                "var(--color-danger)";
+              (e.currentTarget as HTMLElement).style.background =
+                "rgba(239, 68, 68, 0.1)";
             }}
             onMouseOut={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "var(--color-text-secondary)";
+              (e.currentTarget as HTMLElement).style.color =
+                "var(--color-text-secondary)";
               (e.currentTarget as HTMLElement).style.background = "none";
             }}
           >

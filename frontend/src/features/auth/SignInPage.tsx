@@ -5,7 +5,15 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { gsap } from "gsap";
-import { Lock, Mail, User, AlertCircle, ArrowRight, Eye, EyeOff } from "lucide-react";
+import {
+  Lock,
+  Mail,
+  User,
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { useAuth } from "./AuthContext";
 import { getApiErrorMessage } from "@/api/client";
 
@@ -30,14 +38,16 @@ export function SignInPage() {
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Where to navigate after successful sign-in
-  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || "/workspaces";
+  const from =
+    (location.state as { from?: { pathname?: string } })?.from?.pathname ||
+    "/workspaces";
 
   useEffect(() => {
     if (cardRef.current) {
       gsap.fromTo(
         cardRef.current,
         { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.45, ease: "power2.out" }
+        { y: 0, opacity: 1, duration: 0.45, ease: "power2.out" },
       );
     }
   }, [mode]);
@@ -89,7 +99,8 @@ export function SignInPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "radial-gradient(ellipse at 50% 20%, #171728 0%, var(--color-bg) 70%)",
+        background:
+          "radial-gradient(ellipse at 50% 20%, #171728 0%, var(--color-bg) 70%)",
         padding: "var(--space-4)",
       }}
     >
@@ -114,7 +125,8 @@ export function SignInPage() {
               justifyContent: "center",
               width: 48,
               height: 48,
-              background: "linear-gradient(135deg, var(--color-brand) 0%, #817ff5 100%)",
+              background:
+                "linear-gradient(135deg, var(--color-brand) 0%, #817ff5 100%)",
               borderRadius: "12px",
               fontSize: 22,
               fontWeight: 800,
@@ -170,8 +182,12 @@ export function SignInPage() {
               padding: "8px 12px",
               borderRadius: 6,
               border: "none",
-              background: mode === "login" ? "var(--color-surface-3)" : "transparent",
-              color: mode === "login" ? "var(--color-text)" : "var(--color-text-secondary)",
+              background:
+                mode === "login" ? "var(--color-surface-3)" : "transparent",
+              color:
+                mode === "login"
+                  ? "var(--color-text)"
+                  : "var(--color-text-secondary)",
               fontSize: 13,
               fontWeight: 600,
               cursor: "pointer",
@@ -191,8 +207,12 @@ export function SignInPage() {
               padding: "8px 12px",
               borderRadius: 6,
               border: "none",
-              background: mode === "register" ? "var(--color-surface-3)" : "transparent",
-              color: mode === "register" ? "var(--color-text)" : "var(--color-text-secondary)",
+              background:
+                mode === "register" ? "var(--color-surface-3)" : "transparent",
+              color:
+                mode === "register"
+                  ? "var(--color-text)"
+                  : "var(--color-text-secondary)",
               fontSize: 13,
               fontWeight: 600,
               cursor: "pointer",
@@ -225,7 +245,10 @@ export function SignInPage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: 14 }}
+        >
           {mode === "register" && (
             <>
               <div>
@@ -345,7 +368,11 @@ export function SignInPage() {
               <input
                 type={mode === "login" ? "text" : "email"}
                 required
-                placeholder={mode === "login" ? "you@example.com or username" : "you@example.com"}
+                placeholder={
+                  mode === "login"
+                    ? "you@example.com or username"
+                    : "you@example.com"
+                }
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={{
@@ -491,10 +518,13 @@ export function SignInPage() {
               transition: "background 0.2s ease, transform 0.1s ease",
             }}
             onMouseOver={(e) => {
-              if (!isLoading) (e.currentTarget as HTMLElement).style.background = "var(--color-brand-hover)";
+              if (!isLoading)
+                (e.currentTarget as HTMLElement).style.background =
+                  "var(--color-brand-hover)";
             }}
             onMouseOut={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "var(--color-brand)";
+              (e.currentTarget as HTMLElement).style.background =
+                "var(--color-brand)";
             }}
           >
             {isLoading ? (

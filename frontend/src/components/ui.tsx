@@ -3,10 +3,7 @@
  */
 
 import type { TaskPriority, TaskStatus, User } from "@/types";
-import {
-  TASK_PRIORITY_LABELS,
-  TASK_STATUS_LABELS,
-} from "@/types";
+import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/types";
 
 // ─────────────────────────────────────────────────────────────
 // Status Badge
@@ -49,7 +46,8 @@ interface AvatarProps {
 }
 
 export function Avatar({ user, size = "md" }: AvatarProps) {
-  const sizeClass = size === "sm" ? "avatar-sm" : size === "lg" ? "avatar-lg" : "";
+  const sizeClass =
+    size === "sm" ? "avatar-sm" : size === "lg" ? "avatar-lg" : "";
 
   if (!user) {
     return <div className={`avatar ${sizeClass}`}>?</div>;
@@ -148,5 +146,9 @@ export function EmptyState({
 export { Modal, ModalHeader, ModalBody, ModalFooter } from "./Modal";
 export type { ModalProps } from "./Modal";
 export { FormField, Input, Textarea, Select } from "./FormField";
-export type { FormFieldProps, InputProps, TextareaProps, SelectProps } from "./FormField";
-
+export type {
+  FormFieldProps,
+  InputProps,
+  TextareaProps,
+  SelectProps,
+} from "./FormField";

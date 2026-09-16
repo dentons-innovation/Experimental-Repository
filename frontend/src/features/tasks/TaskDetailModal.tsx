@@ -9,7 +9,7 @@ import {
   User as UserIcon,
   Tag,
 } from "lucide-react";
-import { tasksApi, commentsApi } from "@/api/fetchers";
+import { tasksApi, commentsApi, workspacesApi } from "@/api/fetchers";
 import { queryKeys } from "@/api/queryKeys";
 import type { TaskPriority, TaskStatus } from "@/types";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/types";
@@ -17,8 +17,6 @@ import {
   Modal,
   LoadingSpinner,
   ErrorMessage,
-  TaskStatusBadge,
-  TaskPriorityBadge,
   LabelChip,
   Avatar,
   Select,
@@ -32,6 +30,7 @@ interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   projectSlug?: string;
+  workspaceId?: string;
 }
 
 export function TaskDetailModal({
@@ -39,6 +38,7 @@ export function TaskDetailModal({
   isOpen,
   onClose,
   projectSlug,
+  workspaceId,
 }: TaskDetailModalProps) {
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState("");
@@ -54,10 +54,15 @@ export function TaskDetailModal({
     enabled: !!taskId && isOpen,
   });
 
-  const {
-    data: commentsData,
-    isLoading: isCommentsLoading,
-  } = useQuery({
+  const effectiveWorkspaceId = workspaceId || task?.workspace_id;
+
+  const { data: members } = useQuery({
+    queryKey: queryKeys.workspaces.members(effectiveWorkspaceId ?? ""),
+    queryFn: () => workspacesApi.listMembers(effectiveWorkspaceId!),
+    enabled: !!effectiveWorkspaceId && isOpen,
+  });
+
+  const { data: commentsData, isLoading: isCommentsLoading } = useQuery({
     queryKey: queryKeys.comments.byTask(taskId ?? ""),
     queryFn: () => commentsApi.list(taskId!),
     enabled: !!taskId && isOpen,
@@ -70,7 +75,11 @@ export function TaskDetailModal({
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: (payload: { status?: TaskStatus; priority?: TaskPriority }) => {
+    mutationFn: (payload: {
+      status?: TaskStatus;
+      priority?: TaskPriority;
+      assignee_id?: string | null;
+    }) => {
       setOccError(null);
       return tasksApi.update(taskId!, {
         version: task!.version,
@@ -91,10 +100,12 @@ export function TaskDetailModal({
       });
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      const axiosErr = err as {
+        response?: { status?: number; data?: { detail?: string } };
+      };
       if (axiosErr.response?.status === 409) {
         setOccError(
-          "Conflict: This task was modified concurrently by another update. Please re-open to refresh."
+          "Conflict: This task was modified concurrently by another update. Please re-open to refresh.",
         );
       } else {
         setOccError("Failed to update task. Please try again.");
@@ -127,24 +138,36 @@ export function TaskDetailModal({
       onClose={onClose}
       maxWidth={720}
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div>
+          <h2
+            className="modal-title"
+            style={{ fontSize: "16px", fontWeight: 600 }}
+          >
+            {task?.title ?? "Issue Details"}
+          </h2>
           <span
             style={{
               fontSize: "12px",
-              color: "var(--color-brand)",
-              fontWeight: 700,
-              background: "var(--color-brand-muted)",
-              padding: "2px 8px",
-              borderRadius: "var(--radius-sm)",
+              color: "var(--color-text-secondary)",
+              display: "block",
+              marginTop: "2px",
+              fontWeight: 500,
             }}
           >
-            {slugPrefix}{taskId.slice(0, 4)}
+            {slugPrefix}
+            {taskId.slice(0, 4)}
           </span>
-          <span>{task?.title ?? "Issue Details"}</span>
         </div>
       }
       footer={
-        <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            width: "100%",
+            alignItems: "center",
+          }}
+        >
           <Link
             to={`/tasks/${taskId}`}
             className="text-secondary text-sm flex items-center gap-1"
@@ -173,7 +196,7 @@ export function TaskDetailModal({
             </div>
           )}
 
-          {/* Controls Bar: Status, Priority, Badges */}
+          {/* Controls Bar: Status and Priority */}
           <div
             style={{
               display: "grid",
@@ -190,50 +213,44 @@ export function TaskDetailModal({
               <label className="input-label" htmlFor="modalTaskStatus">
                 Status
               </label>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Select
-                  id="modalTaskStatus"
-                  value={task.status}
-                  disabled={updateTaskMutation.isPending}
-                  onChange={(e) =>
-                    updateTaskMutation.mutate({
-                      status: e.target.value as TaskStatus,
-                    })
-                  }
-                >
-                  {ALL_STATUSES.map((st) => (
-                    <option key={st} value={st}>
-                      {TASK_STATUS_LABELS[st]}
-                    </option>
-                  ))}
-                </Select>
-                <TaskStatusBadge status={task.status} />
-              </div>
+              <Select
+                id="modalTaskStatus"
+                value={task.status}
+                disabled={updateTaskMutation.isPending}
+                onChange={(e) =>
+                  updateTaskMutation.mutate({
+                    status: e.target.value as TaskStatus,
+                  })
+                }
+              >
+                {ALL_STATUSES.map((st) => (
+                  <option key={st} value={st}>
+                    {TASK_STATUS_LABELS[st]}
+                  </option>
+                ))}
+              </Select>
             </div>
 
             <div>
               <label className="input-label" htmlFor="modalTaskPriority">
                 Priority
               </label>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Select
-                  id="modalTaskPriority"
-                  value={task.priority}
-                  disabled={updateTaskMutation.isPending}
-                  onChange={(e) =>
-                    updateTaskMutation.mutate({
-                      priority: e.target.value as TaskPriority,
-                    })
-                  }
-                >
-                  {ALL_PRIORITIES.map((p) => (
-                    <option key={p} value={p}>
-                      {TASK_PRIORITY_LABELS[p]}
-                    </option>
-                  ))}
-                </Select>
-                <TaskPriorityBadge priority={task.priority} />
-              </div>
+              <Select
+                id="modalTaskPriority"
+                value={task.priority}
+                disabled={updateTaskMutation.isPending}
+                onChange={(e) =>
+                  updateTaskMutation.mutate({
+                    priority: e.target.value as TaskPriority,
+                  })
+                }
+              >
+                {ALL_PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {TASK_PRIORITY_LABELS[p]}
+                  </option>
+                ))}
+              </Select>
             </div>
           </div>
 
@@ -248,7 +265,9 @@ export function TaskDetailModal({
                 padding: "14px 16px",
                 fontSize: "14px",
                 lineHeight: "1.6",
-                color: task.description ? "var(--color-text)" : "var(--color-text-tertiary)",
+                color: task.description
+                  ? "var(--color-text)"
+                  : "var(--color-text-tertiary)",
                 minHeight: "70px",
                 whiteSpace: "pre-wrap",
               }}
@@ -257,34 +276,69 @@ export function TaskDetailModal({
             </div>
           </div>
 
-          {/* Meta Attributes: Assignee, Reporter, Labels */}
+          {/* Meta Attributes: Assignee Selector, Reporter, Labels */}
           <div
             style={{
               display: "flex",
               flexWrap: "wrap",
-              gap: "24px",
+              alignItems: "flex-start",
+              gap: "20px",
               paddingBottom: "16px",
               borderBottom: "1px solid var(--color-border)",
               marginBottom: "20px",
             }}
           >
-            <div>
-              <span className="input-label flex items-center gap-1">
+            {/* Interactive Assignee Selector */}
+            <div style={{ flex: "1 1 200px" }}>
+              <label
+                className="input-label flex items-center gap-1"
+                htmlFor="modalTaskAssignee"
+              >
                 <UserIcon size={12} /> Assignee
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginTop: "4px",
+                }}
+              >
                 <Avatar user={task.assignee} size="sm" />
-                <span style={{ fontSize: "13px" }}>
-                  {task.assignee?.full_name ?? "Unassigned"}
-                </span>
+                <Select
+                  id="modalTaskAssignee"
+                  value={task.assignee?.id ?? task.assignee_id ?? ""}
+                  disabled={updateTaskMutation.isPending}
+                  onChange={(e) =>
+                    updateTaskMutation.mutate({
+                      assignee_id: e.target.value ? e.target.value : null,
+                    })
+                  }
+                  style={{ flex: 1 }}
+                >
+                  <option value="">Unassigned</option>
+                  {members?.map((m) => (
+                    <option key={m.user.id} value={m.user.id}>
+                      {m.user.full_name}
+                    </option>
+                  ))}
+                </Select>
               </div>
             </div>
 
+            {/* Reporter */}
             <div>
               <span className="input-label flex items-center gap-1">
                 <UserIcon size={12} /> Reporter
               </span>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginTop: "8px",
+                }}
+              >
                 <Avatar user={task.creator} size="sm" />
                 <span style={{ fontSize: "13px" }}>
                   {task.creator?.full_name ?? "Unknown"}
@@ -292,12 +346,20 @@ export function TaskDetailModal({
               </div>
             </div>
 
+            {/* Labels */}
             {task.labels && task.labels.length > 0 && (
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: "1 1 100%" }}>
                 <span className="input-label flex items-center gap-1">
                   <Tag size={12} /> Labels
                 </span>
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "6px",
+                    flexWrap: "wrap",
+                    marginTop: "4px",
+                  }}
+                >
                   {task.labels.map((l) => (
                     <LabelChip key={l.id} name={l.name} color={l.color} />
                   ))}
@@ -308,7 +370,14 @@ export function TaskDetailModal({
 
           {/* Comments Section */}
           <div style={{ marginBottom: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "12px",
+              }}
+            >
               <MessageSquare size={16} className="text-secondary" />
               <h3 style={{ fontSize: "14px", fontWeight: 600 }}>
                 Comments ({comments.length})
@@ -332,7 +401,13 @@ export function TaskDetailModal({
                 onChange={(e) => setCommentText(e.target.value)}
                 style={{ minHeight: "65px" }}
               />
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: "8px",
+                }}
+              >
                 <button
                   type="submit"
                   className="btn btn-primary btn-sm"
@@ -352,7 +427,13 @@ export function TaskDetailModal({
                 No comments yet.
               </p>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
                 {comments.map((c) => (
                   <div
                     key={c.id}
@@ -363,14 +444,32 @@ export function TaskDetailModal({
                       border: "1px solid var(--color-border-subtle)",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "4px",
+                      }}
+                    >
                       <Avatar user={c.author} size="sm" />
-                      <span style={{ fontWeight: 600, fontSize: "13px" }}>{c.author.full_name}</span>
-                      <span className="text-secondary" style={{ fontSize: "11px", marginLeft: "auto" }}>
+                      <span style={{ fontWeight: 600, fontSize: "13px" }}>
+                        {c.author.full_name}
+                      </span>
+                      <span
+                        className="text-secondary"
+                        style={{ fontSize: "11px", marginLeft: "auto" }}
+                      >
                         {new Date(c.created_at).toLocaleString()}
                       </span>
                     </div>
-                    <div style={{ fontSize: "13px", lineHeight: "1.5", whiteSpace: "pre-wrap" }}>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        lineHeight: "1.5",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
                       {c.body}
                     </div>
                   </div>
@@ -382,11 +481,20 @@ export function TaskDetailModal({
           {/* Activity Stream */}
           {activities.length > 0 && (
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "10px",
+                }}
+              >
                 <History size={15} className="text-secondary" />
                 <h4 style={{ fontSize: "13px", fontWeight: 600 }}>Activity</h4>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+              >
                 {activities.slice(0, 5).map((act) => (
                   <div
                     key={act.id}
@@ -398,11 +506,19 @@ export function TaskDetailModal({
                       color: "var(--color-text-secondary)",
                     }}
                   >
-                    <span style={{ fontWeight: 500, color: "var(--color-text)" }}>
+                    <span
+                      style={{ fontWeight: 500, color: "var(--color-text)" }}
+                    >
                       {act.actor?.full_name ?? "System"}
                     </span>
                     <span>{act.action}</span>
-                    <span style={{ marginLeft: "auto", color: "var(--color-text-tertiary)", fontSize: "11px" }}>
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        color: "var(--color-text-tertiary)",
+                        fontSize: "11px",
+                      }}
+                    >
                       {new Date(act.created_at).toLocaleDateString()}
                     </span>
                   </div>

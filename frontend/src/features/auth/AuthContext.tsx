@@ -14,11 +14,7 @@ import React, {
 } from "react";
 import { authApi } from "@/api/fetchers";
 import { setAuthToken } from "@/api/client";
-import type {
-  LoginCredentials,
-  RegisterCredentials,
-  User,
-} from "@/types";
+import type { LoginCredentials, RegisterCredentials, User } from "@/types";
 
 interface AuthContextValue {
   user: User | null;
@@ -37,7 +33,7 @@ const USER_KEY = "pf_auth_user";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem(TOKEN_KEY)
+    localStorage.getItem(TOKEN_KEY),
   );
   const [user, setUser] = useState<User | null>(() => {
     const raw = localStorage.getItem(USER_KEY);

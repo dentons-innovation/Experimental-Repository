@@ -143,6 +143,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   assignee: User | null;
+  assignee_id?: string | null;
   creator: User;
   labels: Label[];
   due_date: string | null;

@@ -43,7 +43,8 @@ export function Modal({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = prevOverflow === "hidden" ? "" : prevOverflow;
+      document.body.style.overflow =
+        prevOverflow === "hidden" ? "" : prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen]);
@@ -72,7 +73,10 @@ export function Modal({
             <div>
               <h2 className="modal-title">{title}</h2>
               {description && (
-                <p className="text-secondary text-sm" style={{ marginTop: "4px" }}>
+                <p
+                  className="text-secondary text-sm"
+                  style={{ marginTop: "4px" }}
+                >
                   {description}
                 </p>
               )}
@@ -93,7 +97,7 @@ export function Modal({
         {footer && <div className="modal-footer">{footer}</div>}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
 

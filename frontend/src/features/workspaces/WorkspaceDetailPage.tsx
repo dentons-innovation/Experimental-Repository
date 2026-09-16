@@ -1,9 +1,17 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FolderPlus, Layers, Users, Calendar } from "lucide-react";
+import {
+  FolderPlus,
+  Layers,
+  Users,
+  Calendar,
+  Edit2,
+  Trash2,
+} from "lucide-react";
 import { workspacesApi, projectsApi } from "@/api/fetchers";
 import { queryKeys } from "@/api/queryKeys";
+import type { Project } from "@/types";
 import {
   LoadingSpinner,
   ErrorMessage,
@@ -17,10 +25,26 @@ import {
 
 export function WorkspaceDetailPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Create project state
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
+
+  // Edit workspace state
+  const [isEditWsOpen, setIsEditWsOpen] = useState(false);
+  const [editWsName, setEditWsName] = useState("");
+  const [editWsDesc, setEditWsDesc] = useState("");
+  const [isDeleteWsOpen, setIsDeleteWsOpen] = useState(false);
+
+  // Edit / Delete selected project state
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [editProjName, setEditProjName] = useState("");
+  const [editProjDesc, setEditProjDesc] = useState("");
+  const [isDeleteProjectOpen, setIsDeleteProjectOpen] = useState(false);
 
   const {
     data: workspace,
@@ -61,6 +85,53 @@ export function WorkspaceDetailPage() {
     },
   });
 
+  const editWorkspaceMutation = useMutation({
+    mutationFn: (payload: { name: string; description?: string }) =>
+      workspacesApi.update(workspaceId!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaces.detail(workspaceId!),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaces.list(),
+      });
+      setIsEditWsOpen(false);
+    },
+  });
+
+  const deleteWorkspaceMutation = useMutation({
+    mutationFn: () => workspacesApi.delete(workspaceId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaces.all(),
+      });
+      navigate("/workspaces");
+    },
+  });
+
+  const editProjectMutation = useMutation({
+    mutationFn: (payload: { name: string; description?: string }) =>
+      projectsApi.update(selectedProject!.id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.byWorkspace(workspaceId!),
+      });
+      setIsEditProjectOpen(false);
+      setSelectedProject(null);
+    },
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: (id: string) => projectsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.byWorkspace(workspaceId!),
+      });
+      setIsDeleteProjectOpen(false);
+      setSelectedProject(null);
+    },
+  });
+
   if (isWsLoading) return <LoadingSpinner fullPage />;
   if (wsError || !workspace) {
     return <ErrorMessage message="Failed to load workspace details" />;
@@ -72,29 +143,85 @@ export function WorkspaceDetailPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{workspace.name}</h1>
+          <div
+            style={{
+              fontSize: "12px",
+              color: "var(--color-text-secondary)",
+              marginTop: "2px",
+              fontWeight: 500,
+            }}
+          >
+            /{workspace.slug}
+          </div>
           {workspace.description && (
-            <p className="page-subtitle">{workspace.description}</p>
+            <p className="page-subtitle" style={{ marginTop: "4px" }}>
+              {workspace.description}
+            </p>
           )}
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setIsCreateProjectOpen(true)}
-        >
-          <FolderPlus size={16} />
-          New Project
-        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setEditWsName(workspace.name);
+              setEditWsDesc(workspace.description || "");
+              setIsEditWsOpen(true);
+            }}
+          >
+            <Edit2 size={13} /> Edit
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ color: "var(--color-danger)" }}
+            onClick={() => setIsDeleteWsOpen(true)}
+          >
+            <Trash2 size={13} /> Delete
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setIsCreateProjectOpen(true)}
+          >
+            <FolderPlus size={16} />
+            New Project
+          </button>
+        </div>
       </div>
 
       <div className="page-content">
         {/* Workspace Meta & Members */}
         <div className="card mb-6" style={{ padding: "16px 20px" }}>
-          <div style={{ display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "24px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "13px",
+              }}
+            >
               <Calendar size={14} className="text-secondary" />
               <span className="text-secondary">Created:</span>
               <span>{new Date(workspace.created_at).toLocaleDateString()}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "13px",
+              }}
+            >
               <Users size={14} className="text-secondary" />
               <span className="text-secondary">Members:</span>
               <div style={{ display: "flex", gap: "4px" }}>
@@ -128,6 +255,7 @@ export function WorkspaceDetailPage() {
               description="Create your first project to start organizing tasks and tracking progress."
               action={
                 <button
+                  type="button"
                   className="btn btn-primary"
                   onClick={() => setIsCreateProjectOpen(true)}
                 >
@@ -149,23 +277,29 @@ export function WorkspaceDetailPage() {
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    minHeight: "150px",
+                    minHeight: "160px",
                   }}
                 >
                   <div>
                     <div
                       style={{
                         display: "flex",
-                        alignItems: "center",
+                        alignItems: "flex-start",
                         justifyContent: "space-between",
                         marginBottom: "12px",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "12px",
+                        }}
+                      >
                         <div
                           style={{
-                            width: 34,
-                            height: 34,
+                            width: 36,
+                            height: 36,
                             borderRadius: "var(--radius-md)",
                             background: "var(--color-brand-muted)",
                             display: "flex",
@@ -173,23 +307,79 @@ export function WorkspaceDetailPage() {
                             justifyContent: "center",
                             color: "var(--color-brand)",
                             flexShrink: 0,
+                            marginTop: "2px",
                           }}
                         >
                           <Layers size={18} />
                         </div>
-                        <h3 style={{ fontSize: "16px", fontWeight: 600 }}>{project.name}</h3>
+                        <div>
+                          <h3
+                            style={{
+                              fontSize: "16px",
+                              fontWeight: 600,
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            {project.name}
+                          </h3>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "var(--color-text-secondary)",
+                              marginTop: "2px",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {project.slug}
+                          </div>
+                        </div>
                       </div>
-                      <span
-                        className="badge"
-                        style={{
-                          background: "var(--color-surface-2)",
-                          border: "1px solid var(--color-border)",
-                          color: "var(--color-text-secondary)",
+
+                      {/* Card Edit/Delete Actions */}
+                      <div
+                        style={{ display: "flex", gap: "4px" }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                         }}
                       >
-                        {project.slug}
-                      </span>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-icon"
+                          style={{ width: "28px", height: "28px" }}
+                          title="Edit Project"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedProject(project);
+                            setEditProjName(project.name);
+                            setEditProjDesc(project.description || "");
+                            setIsEditProjectOpen(true);
+                          }}
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-icon"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            color: "var(--color-danger)",
+                          }}
+                          title="Delete Project"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedProject(project);
+                            setIsDeleteProjectOpen(true);
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
+
                     {project.description && (
                       <p
                         className="text-secondary"
@@ -216,8 +406,13 @@ export function WorkspaceDetailPage() {
                       color: "var(--color-text-tertiary)",
                     }}
                   >
-                    <span>Updated {new Date(project.updated_at).toLocaleDateString()}</span>
-                    <span className="text-primary text-sm font-semibold">View Board →</span>
+                    <span>
+                      Updated{" "}
+                      {new Date(project.updated_at).toLocaleDateString()}
+                    </span>
+                    <span className="text-primary text-sm font-semibold">
+                      View Board →
+                    </span>
                   </div>
                 </Link>
               ))}
@@ -245,9 +440,13 @@ export function WorkspaceDetailPage() {
               type="submit"
               form="create-project-form"
               className="btn btn-primary"
-              disabled={createProjectMutation.isPending || !newProjectName.trim()}
+              disabled={
+                createProjectMutation.isPending || !newProjectName.trim()
+              }
             >
-              {createProjectMutation.isPending ? "Creating..." : "Create Project"}
+              {createProjectMutation.isPending
+                ? "Creating..."
+                : "Create Project"}
             </button>
           </>
         }
@@ -290,6 +489,225 @@ export function WorkspaceDetailPage() {
           </FormField>
         </form>
       </Modal>
+
+      {/* Edit Workspace Modal */}
+      <Modal
+        isOpen={isEditWsOpen}
+        onClose={() => setIsEditWsOpen(false)}
+        title="Edit Workspace"
+        description="Update the workspace name and purpose."
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsEditWsOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="edit-workspace-form"
+              className="btn btn-primary"
+              disabled={editWorkspaceMutation.isPending || !editWsName.trim()}
+            >
+              {editWorkspaceMutation.isPending ? "Saving..." : "Save Changes"}
+            </button>
+          </>
+        }
+      >
+        <form
+          id="edit-workspace-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!editWsName.trim()) return;
+            editWorkspaceMutation.mutate({
+              name: editWsName.trim(),
+              description: editWsDesc.trim() || undefined,
+            });
+          }}
+        >
+          <FormField label="Workspace Name" htmlFor="editWsName" required>
+            <Input
+              id="editWsName"
+              value={editWsName}
+              onChange={(e) => setEditWsName(e.target.value)}
+              required
+              autoFocus
+            />
+          </FormField>
+          <FormField label="Description" htmlFor="editWsDesc">
+            <Textarea
+              id="editWsDesc"
+              rows={3}
+              value={editWsDesc}
+              onChange={(e) => setEditWsDesc(e.target.value)}
+            />
+          </FormField>
+        </form>
+      </Modal>
+
+      {/* Delete Workspace Modal */}
+      <Modal
+        isOpen={isDeleteWsOpen}
+        onClose={() => setIsDeleteWsOpen(false)}
+        title="Delete Workspace"
+        description="Are you sure you want to delete this workspace?"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsDeleteWsOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{
+                backgroundColor: "var(--color-danger)",
+                borderColor: "var(--color-danger)",
+              }}
+              disabled={deleteWorkspaceMutation.isPending}
+              onClick={() => deleteWorkspaceMutation.mutate()}
+            >
+              {deleteWorkspaceMutation.isPending
+                ? "Deleting..."
+                : "Yes, Delete Workspace"}
+            </button>
+          </>
+        }
+      >
+        <p
+          style={{
+            fontSize: "14px",
+            color: "var(--color-text-secondary)",
+            lineHeight: 1.5,
+          }}
+        >
+          Workspace <strong>{workspace.name}</strong> will be permanently
+          removed along with all its projects, tasks, and member associations.
+          This action cannot be undone.
+        </p>
+      </Modal>
+
+      {/* Edit Project Modal */}
+      {selectedProject && (
+        <Modal
+          isOpen={isEditProjectOpen}
+          onClose={() => {
+            setIsEditProjectOpen(false);
+            setSelectedProject(null);
+          }}
+          title="Edit Project"
+          description="Update project name and description."
+          footer={
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setIsEditProjectOpen(false);
+                  setSelectedProject(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="edit-proj-modal-form"
+                className="btn btn-primary"
+                disabled={editProjectMutation.isPending || !editProjName.trim()}
+              >
+                {editProjectMutation.isPending ? "Saving..." : "Save Changes"}
+              </button>
+            </>
+          }
+        >
+          <form
+            id="edit-proj-modal-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!editProjName.trim()) return;
+              editProjectMutation.mutate({
+                name: editProjName.trim(),
+                description: editProjDesc.trim() || undefined,
+              });
+            }}
+          >
+            <FormField label="Project Name" htmlFor="editProjName" required>
+              <Input
+                id="editProjName"
+                value={editProjName}
+                onChange={(e) => setEditProjName(e.target.value)}
+                required
+                autoFocus
+              />
+            </FormField>
+            <FormField label="Description" htmlFor="editProjDesc">
+              <Textarea
+                id="editProjDesc"
+                rows={3}
+                value={editProjDesc}
+                onChange={(e) => setEditProjDesc(e.target.value)}
+              />
+            </FormField>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Project Modal */}
+      {selectedProject && (
+        <Modal
+          isOpen={isDeleteProjectOpen}
+          onClose={() => {
+            setIsDeleteProjectOpen(false);
+            setSelectedProject(null);
+          }}
+          title="Delete Project"
+          description={`Are you sure you want to delete "${selectedProject.name}"?`}
+          footer={
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setIsDeleteProjectOpen(false);
+                  setSelectedProject(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{
+                  backgroundColor: "var(--color-danger)",
+                  borderColor: "var(--color-danger)",
+                }}
+                disabled={deleteProjectMutation.isPending}
+                onClick={() => deleteProjectMutation.mutate(selectedProject.id)}
+              >
+                {deleteProjectMutation.isPending
+                  ? "Deleting..."
+                  : "Yes, Delete Project"}
+              </button>
+            </>
+          }
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "var(--color-text-secondary)",
+              lineHeight: 1.5,
+            }}
+          >
+            Project <strong>{selectedProject.name}</strong> will be permanently
+            deleted along with all its issues and comments.
+          </p>
+        </Modal>
+      )}
     </div>
   );
 }
