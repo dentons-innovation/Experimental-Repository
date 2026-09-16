@@ -141,3 +141,12 @@ export function EmptyState({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// Modal & Form Primitives
+// ─────────────────────────────────────────────────────────────
+export { Modal, ModalHeader, ModalBody, ModalFooter } from "./Modal";
+export type { ModalProps } from "./Modal";
+export { FormField, Input, Textarea, Select } from "./FormField";
+export type { FormFieldProps, InputProps, TextareaProps, SelectProps } from "./FormField";
+

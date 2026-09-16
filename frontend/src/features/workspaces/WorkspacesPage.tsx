@@ -14,6 +14,10 @@ import {
   LoadingSpinner,
   ErrorMessage,
   EmptyState,
+  Modal,
+  FormField,
+  Input,
+  Textarea,
 } from "@/components/ui";
 import type { Workspace } from "@/types";
 
@@ -216,67 +220,61 @@ function CreateWorkspaceModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 className="modal-title">Create Workspace</h2>
-          <button className="btn btn-ghost btn-icon" onClick={onClose}>
-            ✕
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Create Workspace"
+      description="Workspaces group projects, members, and organization settings."
+      footer={
+        <>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+          >
+            Cancel
           </button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            {error && (
-              <div className="error-state" style={{ marginBottom: "var(--space-4)" }}>
-                {error}
-              </div>
-            )}
-            <div className="form-group">
-              <label className="input-label" htmlFor="ws-name">
-                Name *
-              </label>
-              <input
-                id="ws-name"
-                className="input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Engineering, Marketing"
-                autoFocus
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="input-label" htmlFor="ws-description">
-                Description
-              </label>
-              <textarea
-                id="ws-description"
-                className="input textarea"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What is this workspace for?"
-              />
-            </div>
+          <button
+            type="submit"
+            form="create-workspace-form"
+            className="btn btn-primary"
+            disabled={mutation.isPending || !name.trim()}
+            id="create-workspace-submit"
+          >
+            {mutation.isPending ? "Creating…" : "Create Workspace"}
+          </button>
+        </>
+      }
+    >
+      <form id="create-workspace-form" onSubmit={handleSubmit}>
+        {error && (
+          <div className="error-state" style={{ marginBottom: "var(--space-4)" }}>
+            {error}
           </div>
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={mutation.isPending || !name.trim()}
-              id="create-workspace-submit"
-            >
-              {mutation.isPending ? "Creating…" : "Create Workspace"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        )}
+        <FormField label="Name" htmlFor="ws-name" required>
+          <Input
+            id="ws-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Engineering, Marketing"
+            autoFocus
+            required
+          />
+        </FormField>
+        <FormField
+          label="Description"
+          htmlFor="ws-description"
+          helperText="What will this workspace be used for?"
+        >
+          <Textarea
+            id="ws-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. Core engineering tasks and architecture planning"
+          />
+        </FormField>
+      </form>
+    </Modal>
   );
 }
