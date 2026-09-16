@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "projectflow-backend"
+version = "0.1.0"
+description = "ProjectFlow — production-grade project management API"
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+# ──────────────────────────────────────────────
+# Tool configurations
+# ──────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+omit = [
+    "app/__init__.py",
+    "app/core/__init__.py",
+    "app/domain/__init__.py",
+    "app/repositories/__init__.py",
+    "app/services/__init__.py",
+    "app/api/__init__.py",
+    "app/api/v1/__init__.py",
+    "app/api/v1/schemas/__init__.py",
+    "app/api/v1/endpoints/__init__.py",
+    "app/infrastructure/__init__.py",
+]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "B",   # flake8-bugbear
+    "A",   # flake8-builtins
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "RUF", # ruff-specific rules
+    "S",   # flake8-bandit (security)
+    "TCH", # flake8-type-checking
+]
+ignore = [
+    "S101",  # assert in tests
+    "B008",  # function call in default argument (FastAPI Depends)
+    "N805",  # first argument 'cls' (Pydantic validators)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S", "B", "N"]
+"alembic/**/*.py" = ["I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+exclude = ["alembic/", "tests/"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["uuid7.*", "structlog.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
