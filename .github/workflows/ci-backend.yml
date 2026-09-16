@@ -1,0 +1,72 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Lint, Typecheck, and Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: projectflow
+          POSTGRES_PASSWORD: projectflow
+          POSTGRES_DB: projectflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: test
+      TEST_DATABASE_URL: postgresql+asyncpg://projectflow:projectflow@localhost:5432/projectflow_test
+      TEST_DATABASE_SYNC_URL: postgresql+psycopg2://projectflow:projectflow@localhost:5432/projectflow_test
+      DATABASE_URL: postgresql+asyncpg://projectflow:projectflow@localhost:5432/projectflow_test
+      DATABASE_SYNC_URL: postgresql+psycopg2://projectflow:projectflow@localhost:5432/projectflow_test
+      JWT_SECRET_KEY: test-secret-key-12345
+      CORS_ORIGINS: http://localhost:5173
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+        cache-dependency-path: './backend/requirements-dev.txt'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Format Check (Ruff)
+      run: ruff format --check .
+
+    - name: Lint (Ruff)
+      run: ruff check .
+
+    - name: Type Check (Mypy)
+      run: mypy app
+
+    - name: Verify Application Import
+      run: python -c "import app.main; print('App loaded successfully')"
+
+    - name: Run Database Migrations
+      run: alembic upgrade head
+
+    - name: Test (pytest)
+      run: pytest tests/unit tests/api -v --cov=app --cov-branch --cov-report=xml --cov-fail-under=85

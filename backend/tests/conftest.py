@@ -64,10 +64,11 @@ def event_loop_policy():
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     """Create async engine for test database."""
+    connect_args = {"check_same_thread": False} if "sqlite" in TEST_DATABASE_URL else {}
     engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
-        connect_args={"check_same_thread": False},
+        connect_args=connect_args,
     )
 
     async with engine.begin() as conn:
