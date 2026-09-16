@@ -11,7 +11,7 @@ jobs:
     name: Docker Build & Trivy Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build Backend Image
         run: docker build -t projectflow-backend:latest ./backend
