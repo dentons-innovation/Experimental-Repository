@@ -234,6 +234,11 @@ export function TaskDetailPage() {
               }}
               style={{ marginBottom: "20px" }}
             >
+              {addCommentMutation.isError && (
+                <div className="mb-2">
+                  <ErrorMessage message="Failed to post comment. Please try again." />
+                </div>
+              )}
               <textarea
                 className="input"
                 rows={3}

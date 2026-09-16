@@ -393,6 +393,11 @@ export function TaskDetailModal({
               }}
               style={{ marginBottom: "16px" }}
             >
+              {addCommentMutation.isError && (
+                <div className="mb-2">
+                  <ErrorMessage message="Failed to post comment. Please try again." />
+                </div>
+              )}
               <textarea
                 className="input textarea"
                 rows={2}

@@ -21,6 +21,9 @@ def _slugify(name: str) -> str:
     return slug.strip("-")[:64]
 
 
+UNSET: object = object()
+
+
 class ProjectService:
     def __init__(
         self,
@@ -91,7 +94,7 @@ class ProjectService:
         project_id: UUID,
         user_id: UUID,
         name: str | None = None,
-        description: str | None = None,
+        description: str | object | None = UNSET,
     ) -> Project:
         project = await self._proj_repo.get_by_id_with_members(project_id)
         if project is None:
@@ -100,8 +103,8 @@ class ProjectService:
 
         if name is not None:
             project.name = name
-        if description is not None:
-            project.description = description
+        if description is not UNSET:
+            project.description = description  # type: ignore[assignment]
 
         await self._proj_repo.session.flush()
         await self._proj_repo.session.refresh(project)

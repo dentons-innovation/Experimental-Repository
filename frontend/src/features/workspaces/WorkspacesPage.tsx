@@ -37,7 +37,7 @@ export function WorkspacesPage() {
   });
 
   const editMutation = useMutation({
-    mutationFn: (payload: { name: string; description?: string }) =>
+    mutationFn: (payload: { name: string; description?: string | null }) =>
       workspacesApi.update(editingWs!.id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -177,6 +177,11 @@ export function WorkspacesPage() {
             </>
           }
         >
+          {editMutation.isError && (
+            <div className="mb-4">
+              <ErrorMessage message={getApiErrorMessage(editMutation.error)} />
+            </div>
+          )}
           <form
             id="edit-ws-form"
             onSubmit={(e) => {
@@ -184,7 +189,7 @@ export function WorkspacesPage() {
               if (!editName.trim()) return;
               editMutation.mutate({
                 name: editName.trim(),
-                description: editDesc.trim() || undefined,
+                description: editDesc.trim() || null,
               });
             }}
           >
@@ -242,6 +247,13 @@ export function WorkspacesPage() {
             </>
           }
         >
+          {deleteMutation.isError && (
+            <div className="mb-4">
+              <ErrorMessage
+                message={getApiErrorMessage(deleteMutation.error)}
+              />
+            </div>
+          )}
           <p
             style={{
               fontSize: "14px",

@@ -100,6 +100,21 @@ class TestWorkspaceUpdate:
         assert resp.status_code == 200
         assert resp.json()["name"] == "New Name"
 
+    async def test_update_workspace_clear_description(self, api_client: AsyncClient):
+        created = (
+            await api_client.post(
+                "/api/v1/workspaces",
+                json={"name": "WS Desc", "description": "Initial desc"},
+            )
+        ).json()
+        assert created["description"] == "Initial desc"
+        resp = await api_client.patch(
+            f"/api/v1/workspaces/{created['id']}",
+            json={"description": None},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["description"] is None
+
 
 class TestWorkspaceDelete:
     async def test_owner_can_delete_workspace(self, api_client: AsyncClient):

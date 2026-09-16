@@ -18,6 +18,8 @@ from app.services.authorization import AuthorizationService
 
 logger = structlog.get_logger(__name__)
 
+UNSET: object = object()
+
 
 class TaskService:
     def __init__(
@@ -114,7 +116,7 @@ class TaskService:
         user_id: UUID,
         expected_version: int,
         title: str | None = None,
-        description: str | None = None,
+        description: str | object | None = UNSET,
         status: TaskStatus | None = None,
         priority: TaskPriority | None = None,
         assignee_id: UUID | None = None,
@@ -139,9 +141,9 @@ class TaskService:
             activity_entries.append((ActivityAction.TITLE_CHANGED, task.title, title))
             updates["title"] = title
 
-        if description is not None and description != task.description:
+        if description is not UNSET and description != task.description:
             activity_entries.append(
-                (ActivityAction.DESCRIPTION_CHANGED, task.description, description)
+                (ActivityAction.DESCRIPTION_CHANGED, task.description, description)  # type: ignore[arg-type]
             )
             updates["description"] = description
 

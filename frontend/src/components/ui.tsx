@@ -103,20 +103,29 @@ export function LabelChip({ name, color }: { name: string; color: string }) {
 export function LoadingSpinner({ fullPage = false }: { fullPage?: boolean }) {
   if (fullPage) {
     return (
-      <div className="loading-center" style={{ minHeight: "60vh" }}>
+      <div
+        className="loading-center"
+        role="status"
+        aria-label="Loading"
+        style={{ minHeight: "60vh" }}
+      >
         <div className="spinner" style={{ width: 36, height: 36 }} />
       </div>
     );
   }
   return (
-    <div className="loading-center">
+    <div className="loading-center" role="status" aria-label="Loading">
       <div className="spinner" />
     </div>
   );
 }
 
 export function ErrorMessage({ message }: { message: string }) {
-  return <div className="error-state">{message}</div>;
+  return (
+    <div className="error-state" role="alert">
+      {message}
+    </div>
+  );
 }
 
 export function EmptyState({

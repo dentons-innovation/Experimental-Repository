@@ -22,7 +22,7 @@ from app.repositories.project_repository import ProjectRepository
 from app.repositories.task_repository import TaskFilters, TaskRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.services.authorization import AuthorizationService
-from app.services.task_service import TaskService
+from app.services.task_service import UNSET, TaskService
 
 router = APIRouter(tags=["tasks"])
 
@@ -124,7 +124,9 @@ async def update_task(
         user_id=user_id,
         expected_version=payload.version,
         title=payload.title,
-        description=payload.description,
+        description=payload.description
+        if "description" in payload.model_fields_set
+        else UNSET,
         status=payload.status,
         priority=payload.priority,
         assignee_id=payload.assignee_id,

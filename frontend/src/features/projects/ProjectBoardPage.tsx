@@ -22,6 +22,15 @@ import { TaskDetailModal } from "@/features/tasks/TaskDetailModal";
 
 const COLUMNS: TaskStatus[] = ["todo", "in_progress", "in_review", "done"];
 
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!error) return fallback;
+  const axiosErr = error as {
+    response?: { data?: { detail?: string } };
+    message?: string;
+  };
+  return axiosErr.response?.data?.detail || axiosErr.message || fallback;
+}
+
 export function ProjectBoardPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -95,7 +104,7 @@ export function ProjectBoardPage() {
   });
 
   const editProjectMutation = useMutation({
-    mutationFn: (payload: { name: string; description?: string }) =>
+    mutationFn: (payload: { name: string; description?: string | null }) =>
       projectsApi.update(projectId!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -614,6 +623,16 @@ export function ProjectBoardPage() {
           </>
         }
       >
+        {createTaskMutation.isError && (
+          <div className="mb-4">
+            <ErrorMessage
+              message={getApiErrorMessage(
+                createTaskMutation.error,
+                "Failed to create issue. Please check your inputs.",
+              )}
+            />
+          </div>
+        )}
         <form
           id="create-issue-form"
           onSubmit={(e) => {
@@ -734,6 +753,16 @@ export function ProjectBoardPage() {
           </>
         }
       >
+        {editProjectMutation.isError && (
+          <div className="mb-4">
+            <ErrorMessage
+              message={getApiErrorMessage(
+                editProjectMutation.error,
+                "Failed to update project. Please try again.",
+              )}
+            />
+          </div>
+        )}
         <form
           id="edit-project-form"
           onSubmit={(e) => {
@@ -741,7 +770,7 @@ export function ProjectBoardPage() {
             if (!editName.trim()) return;
             editProjectMutation.mutate({
               name: editName.trim(),
-              description: editDesc.trim() || undefined,
+              description: editDesc.trim() || null,
             });
           }}
         >
@@ -797,6 +826,16 @@ export function ProjectBoardPage() {
           </>
         }
       >
+        {deleteProjectMutation.isError && (
+          <div className="mb-4">
+            <ErrorMessage
+              message={getApiErrorMessage(
+                deleteProjectMutation.error,
+                "Failed to delete project. Please try again.",
+              )}
+            />
+          </div>
+        )}
         <p
           style={{
             fontSize: "14px",

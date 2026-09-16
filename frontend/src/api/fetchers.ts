@@ -70,7 +70,7 @@ export const workspacesApi = {
 
   update: (
     id: string,
-    payload: { name?: string; description?: string },
+    payload: { name?: string; description?: string | null },
   ): Promise<Workspace> =>
     apiClient.patch(`/workspaces/${id}`, payload).then((r) => r.data),
 
@@ -118,7 +118,7 @@ export const projectsApi = {
 
   update: (
     id: string,
-    payload: { name?: string; description?: string },
+    payload: { name?: string; description?: string | null },
   ): Promise<Project> =>
     apiClient.patch(`/projects/${id}`, payload).then((r) => r.data),
 

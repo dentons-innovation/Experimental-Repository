@@ -23,7 +23,8 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ENUM, UUID
+
 
 revision: str = "0001"
 down_revision: str | None = None
@@ -33,23 +34,41 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     # ── Enum types ───────────────────────────────────────────
-    op.execute("CREATE TYPE workspace_role AS ENUM ('owner', 'member')")
-    op.execute("CREATE TYPE project_role AS ENUM ('admin', 'member')")
     op.execute(
-        "CREATE TYPE task_status AS ENUM "
-        "('backlog', 'todo', 'in_progress', 'in_review', 'done')"
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'workspace_role') THEN "
+        "CREATE TYPE workspace_role AS ENUM ('owner', 'member'); "
+        "END IF; END $$;"
     )
     op.execute(
-        "CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high', 'critical')"
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'project_role') THEN "
+        "CREATE TYPE project_role AS ENUM ('admin', 'member'); "
+        "END IF; END $$;"
     )
     op.execute(
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_status') THEN "
+        "CREATE TYPE task_status AS ENUM ('backlog', 'todo', 'in_progress', 'in_review', 'done'); "
+        "END IF; END $$;"
+    )
+    op.execute(
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_priority') THEN "
+        "CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high', 'critical'); "
+        "END IF; END $$;"
+    )
+    op.execute(
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'activity_action') THEN "
         "CREATE TYPE activity_action AS ENUM ("
         "'task_created', 'task_updated', 'status_changed', "
         "'priority_changed', 'assigned', 'unassigned', "
         "'label_added', 'label_removed', "
         "'due_date_set', 'due_date_cleared', "
         "'comment_added', 'comment_edited', 'comment_deleted', "
-        "'title_changed', 'description_changed')"
+        "'title_changed', 'description_changed'); "
+        "END IF; END $$;"
     )
 
     # ── users ────────────────────────────────────────────────
@@ -125,7 +144,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "role",
-            sa.Enum("owner", "member", name="workspace_role", create_type=False),
+            ENUM("owner", "member", name="workspace_role", create_type=False),
             nullable=False,
         ),
         sa.Column(
@@ -188,7 +207,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "role",
-            sa.Enum("admin", "member", name="project_role", create_type=False),
+            ENUM("admin", "member", name="project_role", create_type=False),
             nullable=False,
         ),
         sa.Column(
@@ -238,7 +257,7 @@ def upgrade() -> None:
         sa.Column("description", sa.Text, nullable=True),
         sa.Column(
             "status",
-            sa.Enum(
+            ENUM(
                 "backlog",
                 "todo",
                 "in_progress",
@@ -252,7 +271,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "priority",
-            sa.Enum(
+            ENUM(
                 "low",
                 "medium",
                 "high",
@@ -387,7 +406,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "action",
-            sa.Enum(
+            ENUM(
                 "task_created",
                 "task_updated",
                 "status_changed",

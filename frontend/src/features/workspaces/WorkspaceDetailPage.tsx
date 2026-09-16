@@ -23,6 +23,15 @@ import {
   Textarea,
 } from "@/components/ui";
 
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!error) return fallback;
+  const axiosErr = error as {
+    response?: { data?: { detail?: string } };
+    message?: string;
+  };
+  return axiosErr.response?.data?.detail || axiosErr.message || fallback;
+}
+
 export function WorkspaceDetailPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useNavigate();
@@ -86,7 +95,7 @@ export function WorkspaceDetailPage() {
   });
 
   const editWorkspaceMutation = useMutation({
-    mutationFn: (payload: { name: string; description?: string }) =>
+    mutationFn: (payload: { name: string; description?: string | null }) =>
       workspacesApi.update(workspaceId!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -110,7 +119,7 @@ export function WorkspaceDetailPage() {
   });
 
   const editProjectMutation = useMutation({
-    mutationFn: (payload: { name: string; description?: string }) =>
+    mutationFn: (payload: { name: string; description?: string | null }) =>
       projectsApi.update(selectedProject!.id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -267,13 +276,10 @@ export function WorkspaceDetailPage() {
           ) : (
             <div className="grid-auto-fill">
               {projects.items.map((project) => (
-                <Link
+                <div
                   key={project.id}
-                  to={`/projects/${project.id}`}
                   className="card card-hover"
                   style={{
-                    textDecoration: "none",
-                    color: "inherit",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -320,7 +326,16 @@ export function WorkspaceDetailPage() {
                               lineHeight: 1.3,
                             }}
                           >
-                            {project.name}
+                            <Link
+                              to={`/projects/${project.id}`}
+                              style={{
+                                textDecoration: "none",
+                                color: "inherit",
+                              }}
+                              className="project-title-link"
+                            >
+                              {project.name}
+                            </Link>
                           </h3>
                           <div
                             style={{
@@ -336,21 +351,14 @@ export function WorkspaceDetailPage() {
                       </div>
 
                       {/* Card Edit/Delete Actions */}
-                      <div
-                        style={{ display: "flex", gap: "4px" }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                      >
+                      <div style={{ display: "flex", gap: "4px" }}>
                         <button
                           type="button"
                           className="btn btn-ghost btn-icon"
                           style={{ width: "28px", height: "28px" }}
                           title="Edit Project"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
+                          aria-label={`Edit project ${project.name}`}
+                          onClick={() => {
                             setSelectedProject(project);
                             setEditProjName(project.name);
                             setEditProjDesc(project.description || "");
@@ -368,9 +376,8 @@ export function WorkspaceDetailPage() {
                             color: "var(--color-danger)",
                           }}
                           title="Delete Project"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
+                          aria-label={`Delete project ${project.name}`}
+                          onClick={() => {
                             setSelectedProject(project);
                             setIsDeleteProjectOpen(true);
                           }}
@@ -410,11 +417,15 @@ export function WorkspaceDetailPage() {
                       Updated{" "}
                       {new Date(project.updated_at).toLocaleDateString()}
                     </span>
-                    <span className="text-primary text-sm font-semibold">
+                    <Link
+                      to={`/projects/${project.id}`}
+                      className="text-primary text-sm font-semibold"
+                      style={{ textDecoration: "none" }}
+                    >
                       View Board →
-                    </span>
+                    </Link>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -451,6 +462,16 @@ export function WorkspaceDetailPage() {
           </>
         }
       >
+        {createProjectMutation.isError && (
+          <div className="mb-4">
+            <ErrorMessage
+              message={getApiErrorMessage(
+                createProjectMutation.error,
+                "Failed to create project. Please check your inputs.",
+              )}
+            />
+          </div>
+        )}
         <form
           id="create-project-form"
           onSubmit={(e) => {
@@ -516,6 +537,16 @@ export function WorkspaceDetailPage() {
           </>
         }
       >
+        {editWorkspaceMutation.isError && (
+          <div className="mb-4">
+            <ErrorMessage
+              message={getApiErrorMessage(
+                editWorkspaceMutation.error,
+                "Failed to update workspace. Please try again.",
+              )}
+            />
+          </div>
+        )}
         <form
           id="edit-workspace-form"
           onSubmit={(e) => {
@@ -523,7 +554,7 @@ export function WorkspaceDetailPage() {
             if (!editWsName.trim()) return;
             editWorkspaceMutation.mutate({
               name: editWsName.trim(),
-              description: editWsDesc.trim() || undefined,
+              description: editWsDesc.trim() || null,
             });
           }}
         >
@@ -579,6 +610,16 @@ export function WorkspaceDetailPage() {
           </>
         }
       >
+        {deleteWorkspaceMutation.isError && (
+          <div className="mb-4">
+            <ErrorMessage
+              message={getApiErrorMessage(
+                deleteWorkspaceMutation.error,
+                "Failed to delete workspace. Please try again.",
+              )}
+            />
+          </div>
+        )}
         <p
           style={{
             fontSize: "14px",
@@ -625,6 +666,16 @@ export function WorkspaceDetailPage() {
             </>
           }
         >
+          {editProjectMutation.isError && (
+            <div className="mb-4">
+              <ErrorMessage
+                message={getApiErrorMessage(
+                  editProjectMutation.error,
+                  "Failed to update project. Please try again.",
+                )}
+              />
+            </div>
+          )}
           <form
             id="edit-proj-modal-form"
             onSubmit={(e) => {
@@ -632,7 +683,7 @@ export function WorkspaceDetailPage() {
               if (!editProjName.trim()) return;
               editProjectMutation.mutate({
                 name: editProjName.trim(),
-                description: editProjDesc.trim() || undefined,
+                description: editProjDesc.trim() || null,
               });
             }}
           >
@@ -696,6 +747,16 @@ export function WorkspaceDetailPage() {
             </>
           }
         >
+          {deleteProjectMutation.isError && (
+            <div className="mb-4">
+              <ErrorMessage
+                message={getApiErrorMessage(
+                  deleteProjectMutation.error,
+                  "Failed to delete project. Please try again.",
+                )}
+              />
+            </div>
+          )}
           <p
             style={{
               fontSize: "14px",

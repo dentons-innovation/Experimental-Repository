@@ -22,6 +22,9 @@ def _slugify(name: str) -> str:
     return slug[:64]
 
 
+UNSET: object = object()
+
+
 class WorkspaceService:
     def __init__(
         self,
@@ -81,7 +84,7 @@ class WorkspaceService:
         workspace_id: UUID,
         user_id: UUID,
         name: str | None = None,
-        description: str | None = None,
+        description: str | object | None = UNSET,
     ) -> Workspace:
         await self._auth.require_workspace_owner(user_id, workspace_id)
         workspace = await self._ws_repo.get_by_id_with_members(workspace_id)
@@ -90,8 +93,8 @@ class WorkspaceService:
 
         if name is not None:
             workspace.name = name
-        if description is not None:
-            workspace.description = description
+        if description is not UNSET:
+            workspace.description = description  # type: ignore[assignment]
 
         await self._ws_repo.session.flush()
         await self._ws_repo.session.refresh(workspace)
