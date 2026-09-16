@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
-from typing import cast
+from typing import Any, cast
 
 try:
     import uuid_extensions
@@ -54,6 +54,12 @@ from app.domain.enums import (
     TaskStatus,
     WorkspaceRole,
 )
+
+
+def _enum_values(enum_cls: Any) -> list[str]:
+    """Extract string values from Enum class for PostgreSQL enum compatibility."""
+    return [e.value for e in enum_cls]
+
 
 # ─────────────────────────────────────────────────────────────
 # Base classes
@@ -173,7 +179,8 @@ class WorkspaceMember(Base):
         nullable=False,
     )
     role: Mapped[WorkspaceRole] = mapped_column(
-        Enum(WorkspaceRole, name="workspace_role"), nullable=False
+        Enum(WorkspaceRole, name="workspace_role", values_callable=_enum_values),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -249,7 +256,8 @@ class ProjectMember(Base):
         nullable=False,
     )
     role: Mapped[ProjectRole] = mapped_column(
-        Enum(ProjectRole, name="project_role"), nullable=False
+        Enum(ProjectRole, name="project_role", values_callable=_enum_values),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -329,12 +337,12 @@ class Task(Base):
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status"),
+        Enum(TaskStatus, name="task_status", values_callable=_enum_values),
         nullable=False,
         default=TaskStatus.BACKLOG,
     )
     priority: Mapped[TaskPriority] = mapped_column(
-        Enum(TaskPriority, name="task_priority"),
+        Enum(TaskPriority, name="task_priority", values_callable=_enum_values),
         nullable=False,
         default=TaskPriority.MEDIUM,
     )
@@ -504,7 +512,8 @@ class ActivityLog(Base):
         nullable=False,
     )
     action: Mapped[ActivityAction] = mapped_column(
-        Enum(ActivityAction, name="activity_action"), nullable=False
+        Enum(ActivityAction, name="activity_action", values_callable=_enum_values),
+        nullable=False,
     )
     old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     new_value: Mapped[str | None] = mapped_column(Text, nullable=True)

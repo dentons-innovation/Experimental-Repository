@@ -35,7 +35,7 @@ jobs:
       TEST_DATABASE_SYNC_URL: postgresql+psycopg2://projectflow:projectflow@localhost:5432/projectflow_test
       DATABASE_URL: postgresql+asyncpg://projectflow:projectflow@localhost:5432/projectflow_test
       DATABASE_SYNC_URL: postgresql+psycopg2://projectflow:projectflow@localhost:5432/projectflow_test
-      JWT_SECRET_KEY: test-secret-key-12345
+      JWT_SECRET_KEY: test-secret-key-at-least-32-bytes-long-for-hmac
       CORS_ORIGINS: http://localhost:5173
 
     steps:
