@@ -49,7 +49,9 @@ class ProjectService:
             workspace_id, final_slug
         )
         if existing:
-            raise ConflictError(f"Project slug '{final_slug}' already exists in this workspace")
+            raise ConflictError(
+                f"Project slug '{final_slug}' already exists in this workspace"
+            )
 
         project = Project(
             workspace_id=workspace_id,
@@ -77,9 +79,7 @@ class ProjectService:
             workspace_id, user_id, offset=offset, limit=limit
         )
 
-    async def get_project(
-        self, project_id: UUID, user_id: UUID
-    ) -> Project:
+    async def get_project(self, project_id: UUID, user_id: UUID) -> Project:
         project = await self._proj_repo.get_by_id_with_members(project_id)
         if project is None:
             raise NotFoundError("Project", str(project_id))

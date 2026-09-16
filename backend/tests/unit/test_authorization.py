@@ -77,6 +77,7 @@ def _comment(author_id=None, task_id=None) -> Comment:
 # Workspace membership checks
 # ─────────────────────────────────────────────────────────────
 
+
 class TestWorkspaceMembership:
     async def test_owner_can_access_workspace(self):
         auth = _make_auth(ws_role=WorkspaceRole.OWNER)
@@ -112,6 +113,7 @@ class TestWorkspaceMembership:
 # Project membership checks
 # ─────────────────────────────────────────────────────────────
 
+
 class TestProjectMembership:
     async def test_project_admin_gets_admin_role(self):
         auth = _make_auth(proj_role=ProjectRole.ADMIN)
@@ -141,6 +143,7 @@ class TestProjectMembership:
 # ─────────────────────────────────────────────────────────────
 # Project operations — full matrix
 # ─────────────────────────────────────────────────────────────
+
 
 class TestProjectOperations:
     async def test_ws_owner_can_update_project(self):
@@ -190,6 +193,7 @@ class TestProjectOperations:
 # Task operations — full matrix
 # ─────────────────────────────────────────────────────────────
 
+
 class TestTaskOperations:
     async def test_project_member_can_create_task(self):
         auth = _make_auth(proj_role=ProjectRole.MEMBER)
@@ -237,6 +241,7 @@ class TestTaskOperations:
 # Comment operations
 # ─────────────────────────────────────────────────────────────
 
+
 class TestCommentOperations:
     async def test_author_can_edit_own_comment(self):
         user_id = uuid4()
@@ -283,6 +288,7 @@ class TestCommentOperations:
 # Label operations
 # ─────────────────────────────────────────────────────────────
 
+
 class TestLabelOperations:
     async def test_ws_member_can_manage_labels(self):
         auth = _make_auth(ws_role=WorkspaceRole.MEMBER)
@@ -302,6 +308,7 @@ class TestLabelOperations:
 # ─────────────────────────────────────────────────────────────
 # Cross-resource isolation
 # ─────────────────────────────────────────────────────────────
+
 
 class TestCrossResourceIsolation:
     def test_task_in_wrong_project_raises_404(self):
@@ -324,4 +331,6 @@ class TestCrossResourceIsolation:
     def test_project_in_correct_workspace_passes(self):
         workspace_id = uuid4()
         project = _project(workspace_id=workspace_id)
-        AuthorizationService.assert_project_in_workspace(project, workspace_id)  # no exception
+        AuthorizationService.assert_project_in_workspace(
+            project, workspace_id
+        )  # no exception

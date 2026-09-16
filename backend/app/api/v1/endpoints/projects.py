@@ -138,9 +138,7 @@ async def add_project_member(
     session: DbSession,
 ) -> ProjectMemberResponse:
     svc = _make_service(session)
-    member = await svc.add_member(
-        project_id, user_id, payload.user_id, payload.role
-    )
+    member = await svc.add_member(project_id, user_id, payload.user_id, payload.role)
     return ProjectMemberResponse.model_validate(member)
 
 

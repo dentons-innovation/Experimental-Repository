@@ -69,17 +69,24 @@ select = [
     "UP",  # pyupgrade
     "RUF", # ruff-specific rules
     "S",   # flake8-bandit (security)
-    "TCH", # flake8-type-checking
 ]
 ignore = [
     "S101",  # assert in tests
     "B008",  # function call in default argument (FastAPI Depends)
     "N805",  # first argument 'cls' (Pydantic validators)
+    "E501",  # line length handled by ruff format
+    "UP042", # StrEnum - keep str, enum.Enum for sqlalchemy/pydantic compatibility
+    "UP046", # PEP 695 type parameters
+    "N814",  # Uuid as UUID alias
+    "A002",  # argument shadowing builtin id
+    "S104",  # binding to 0.0.0.0 in container config
+    "S105",  # false positive on token_type = "bearer"
+    "S106",  # false positive on token_type = "bearer"
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S", "B", "N"]
-"alembic/**/*.py" = ["I"]
+"tests/**/*.py" = ["S", "B", "N", "F841", "RUF059", "RUF002"]
+"alembic/**/*.py" = ["I", "E402"]
 
 [tool.ruff.format]
 quote-style = "double"

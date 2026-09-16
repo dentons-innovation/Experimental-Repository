@@ -41,9 +41,7 @@ class LabelService:
         await self._label_repo.session.refresh(label)
         return label
 
-    async def list_labels(
-        self, workspace_id: UUID, user_id: UUID
-    ) -> list[Label]:
+    async def list_labels(self, workspace_id: UUID, user_id: UUID) -> list[Label]:
         await self._auth.require_workspace_member(user_id, workspace_id)
         return await self._label_repo.list_for_workspace(workspace_id)
 

@@ -125,9 +125,7 @@ async def add_workspace_member(
     session: DbSession,
 ) -> WorkspaceMemberResponse:
     svc = _make_service(session)
-    member = await svc.add_member(
-        workspace_id, user_id, payload.user_id, payload.role
-    )
+    member = await svc.add_member(workspace_id, user_id, payload.user_id, payload.role)
     return WorkspaceMemberResponse.model_validate(member)
 
 

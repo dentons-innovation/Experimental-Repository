@@ -27,7 +27,9 @@ class AuthorizationError(ProjectFlowError):
 class NotFoundError(ProjectFlowError):
     """Requested resource does not exist or is not visible to the caller."""
 
-    def __init__(self, resource: str = "Resource", resource_id: str | None = None) -> None:
+    def __init__(
+        self, resource: str = "Resource", resource_id: str | None = None
+    ) -> None:
         msg = f"{resource} not found"
         if resource_id:
             msg = f"{resource} '{resource_id}' not found"

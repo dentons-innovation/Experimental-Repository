@@ -31,8 +31,9 @@ class ProjectRepository(BaseRepository[Project]):
         self, workspace_id: UUID, slug: str
     ) -> Project | None:
         result = await self.session.execute(
-            select(Project)
-            .where(Project.workspace_id == workspace_id, Project.slug == slug)
+            select(Project).where(
+                Project.workspace_id == workspace_id, Project.slug == slug
+            )
         )
         return result.scalar_one_or_none()
 
@@ -58,12 +59,9 @@ class ProjectRepository(BaseRepository[Project]):
         )
         return list(result.scalars().all()), total
 
-    async def get_member(
-        self, project_id: UUID, user_id: UUID
-    ) -> ProjectMember | None:
+    async def get_member(self, project_id: UUID, user_id: UUID) -> ProjectMember | None:
         result = await self.session.execute(
-            select(ProjectMember)
-            .where(
+            select(ProjectMember).where(
                 ProjectMember.project_id == project_id,
                 ProjectMember.user_id == user_id,
             )

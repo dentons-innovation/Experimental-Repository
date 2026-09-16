@@ -74,7 +74,7 @@ def create_app() -> FastAPI:
 
     # ── Routers ──────────────────────────────────────────────
     app.include_router(health_router)  # /health, /readiness
-    app.include_router(api_router)     # /api/v1/...
+    app.include_router(api_router)  # /api/v1/...
 
     # ── Exception handlers ───────────────────────────────────
     _register_exception_handlers(app)

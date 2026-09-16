@@ -48,9 +48,7 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         total = count_result.scalar_one()
 
         result = await self.session.execute(
-            base_query.order_by(Workspace.created_at.desc())
-            .offset(offset)
-            .limit(limit)
+            base_query.order_by(Workspace.created_at.desc()).offset(offset).limit(limit)
         )
         return list(result.scalars().all()), total
 
@@ -58,17 +56,14 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         self, workspace_id: UUID, user_id: UUID
     ) -> WorkspaceMember | None:
         result = await self.session.execute(
-            select(WorkspaceMember)
-            .where(
+            select(WorkspaceMember).where(
                 WorkspaceMember.workspace_id == workspace_id,
                 WorkspaceMember.user_id == user_id,
             )
         )
         return result.scalar_one_or_none()
 
-    async def list_members(
-        self, workspace_id: UUID
-    ) -> list[WorkspaceMember]:
+    async def list_members(self, workspace_id: UUID) -> list[WorkspaceMember]:
         result = await self.session.execute(
             select(WorkspaceMember)
             .where(WorkspaceMember.workspace_id == workspace_id)
@@ -80,9 +75,7 @@ class WorkspaceRepository(BaseRepository[Workspace]):
     async def add_member(
         self, workspace_id: UUID, user_id: UUID, role: WorkspaceRole
     ) -> WorkspaceMember:
-        member = WorkspaceMember(
-            workspace_id=workspace_id, user_id=user_id, role=role
-        )
+        member = WorkspaceMember(workspace_id=workspace_id, user_id=user_id, role=role)
         self.session.add(member)
         await self.session.flush()
         await self.session.refresh(member)

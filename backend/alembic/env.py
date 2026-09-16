@@ -8,14 +8,13 @@ falling back to the alembic.ini value.
 
 from __future__ import annotations
 
-import os
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 # Import all models so Alembic can detect them for autogenerate
-from app.domain.models import Base  # noqa: F401 — needed for metadata
+from app.domain.models import Base
 
 config = context.config
 

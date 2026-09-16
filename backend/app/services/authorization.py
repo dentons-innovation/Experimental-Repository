@@ -47,7 +47,7 @@ import structlog
 
 from app.domain.enums import ProjectRole, WorkspaceRole
 from app.domain.exceptions import AuthorizationError, NotFoundError
-from app.domain.models import Comment, Project, Task, Workspace
+from app.domain.models import Comment, Project, Task
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 
@@ -90,9 +90,7 @@ class AuthorizationService:
             raise NotFoundError("Workspace", str(workspace_id))
         return role
 
-    async def require_workspace_owner(
-        self, user_id: UUID, workspace_id: UUID
-    ) -> None:
+    async def require_workspace_owner(self, user_id: UUID, workspace_id: UUID) -> None:
         role = await self._get_ws_role(user_id, workspace_id)
         if role is None:
             raise NotFoundError("Workspace", str(workspace_id))
@@ -118,30 +116,22 @@ class AuthorizationService:
             raise NotFoundError("Project", str(project_id))
         return role
 
-    async def require_project_admin(
-        self, user_id: UUID, project_id: UUID
-    ) -> None:
+    async def require_project_admin(self, user_id: UUID, project_id: UUID) -> None:
         role = await self._get_proj_role(user_id, project_id)
         if role is None:
             raise NotFoundError("Project", str(project_id))
         if role != ProjectRole.ADMIN:
-            raise AuthorizationError(
-                "Only project admins can perform this action"
-            )
+            raise AuthorizationError("Only project admins can perform this action")
 
     # ─────────────────────────────────────────────────────────
     # Combined / context-aware checks
     # ─────────────────────────────────────────────────────────
 
-    async def can_create_project(
-        self, user_id: UUID, workspace_id: UUID
-    ) -> None:
+    async def can_create_project(self, user_id: UUID, workspace_id: UUID) -> None:
         """Any workspace member can create a project."""
         await self.require_workspace_member(user_id, workspace_id)
 
-    async def can_read_project(
-        self, user_id: UUID, project: Project
-    ) -> None:
+    async def can_read_project(self, user_id: UUID, project: Project) -> None:
         """User must be a project member OR a workspace owner."""
         ws_role = await self._get_ws_role(user_id, project.workspace_id)
         if ws_role == WorkspaceRole.OWNER:
@@ -150,56 +140,40 @@ class AuthorizationService:
         if proj_role is None:
             raise NotFoundError("Project", str(project.id))
 
-    async def can_update_project(
-        self, user_id: UUID, project: Project
-    ) -> None:
+    async def can_update_project(self, user_id: UUID, project: Project) -> None:
         ws_role = await self._get_ws_role(user_id, project.workspace_id)
         if ws_role == WorkspaceRole.OWNER:
             return
         await self.require_project_admin(user_id, project.id)
 
-    async def can_delete_project(
-        self, user_id: UUID, project: Project
-    ) -> None:
+    async def can_delete_project(self, user_id: UUID, project: Project) -> None:
         ws_role = await self._get_ws_role(user_id, project.workspace_id)
         if ws_role == WorkspaceRole.OWNER:
             return
         await self.require_project_admin(user_id, project.id)
 
-    async def can_manage_project_members(
-        self, user_id: UUID, project: Project
-    ) -> None:
+    async def can_manage_project_members(self, user_id: UUID, project: Project) -> None:
         ws_role = await self._get_ws_role(user_id, project.workspace_id)
         if ws_role == WorkspaceRole.OWNER:
             return
         await self.require_project_admin(user_id, project.id)
 
-    async def can_create_task(
-        self, user_id: UUID, project_id: UUID
-    ) -> None:
+    async def can_create_task(self, user_id: UUID, project_id: UUID) -> None:
         await self.require_project_member(user_id, project_id)
 
-    async def can_read_task(
-        self, user_id: UUID, task: Task
-    ) -> None:
+    async def can_read_task(self, user_id: UUID, task: Task) -> None:
         await self.require_project_member(user_id, task.project_id)
 
-    async def can_update_task(
-        self, user_id: UUID, task: Task
-    ) -> None:
+    async def can_update_task(self, user_id: UUID, task: Task) -> None:
         await self.require_project_member(user_id, task.project_id)
 
-    async def can_delete_task(
-        self, user_id: UUID, task: Task
-    ) -> None:
+    async def can_delete_task(self, user_id: UUID, task: Task) -> None:
         ws_role = await self._get_ws_role(user_id, task.workspace_id)
         if ws_role == WorkspaceRole.OWNER:
             return
         await self.require_project_admin(user_id, task.project_id)
 
-    async def can_create_comment(
-        self, user_id: UUID, task: Task
-    ) -> None:
+    async def can_create_comment(self, user_id: UUID, task: Task) -> None:
         await self.require_project_member(user_id, task.project_id)
 
     async def can_edit_comment(
@@ -225,9 +199,7 @@ class AuthorizationService:
         proj_role = await self._get_proj_role(user_id, task.project_id)
         if proj_role == ProjectRole.ADMIN:
             return
-        raise AuthorizationError(
-            "Only project admins can delete other users' comments"
-        )
+        raise AuthorizationError("Only project admins can delete other users' comments")
 
     async def can_manage_labels(
         self, user_id: UUID, workspace_id: UUID
@@ -237,9 +209,7 @@ class AuthorizationService:
         """
         return await self.require_workspace_member(user_id, workspace_id)
 
-    async def can_delete_label(
-        self, user_id: UUID, workspace_id: UUID
-    ) -> None:
+    async def can_delete_label(self, user_id: UUID, workspace_id: UUID) -> None:
         await self.require_workspace_owner(user_id, workspace_id)
 
     # ─────────────────────────────────────────────────────────

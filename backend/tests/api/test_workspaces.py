@@ -6,7 +6,6 @@ Each test is isolated by transaction rollback.
 
 from __future__ import annotations
 
-import pytest
 from httpx import AsyncClient
 
 

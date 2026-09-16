@@ -69,9 +69,7 @@ class WorkspaceService:
     ) -> tuple[list[Workspace], int]:
         return await self._ws_repo.list_for_user(user_id, offset=offset, limit=limit)
 
-    async def get_workspace(
-        self, workspace_id: UUID, user_id: UUID
-    ) -> Workspace:
+    async def get_workspace(self, workspace_id: UUID, user_id: UUID) -> Workspace:
         await self._auth.require_workspace_member(user_id, workspace_id)
         workspace = await self._ws_repo.get_by_id_with_members(workspace_id)
         if workspace is None:
@@ -99,9 +97,7 @@ class WorkspaceService:
         await self._ws_repo.session.refresh(workspace)
         return workspace
 
-    async def delete_workspace(
-        self, workspace_id: UUID, user_id: UUID
-    ) -> None:
+    async def delete_workspace(self, workspace_id: UUID, user_id: UUID) -> None:
         await self._auth.require_workspace_owner(user_id, workspace_id)
         workspace = await self._ws_repo.get_by_id_with_members(workspace_id)
         if workspace is None:

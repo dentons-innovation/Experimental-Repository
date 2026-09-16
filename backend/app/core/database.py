@@ -75,14 +75,14 @@ _session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
 def get_engine() -> AsyncEngine:
-    global _engine  # noqa: PLW0603
+    global _engine
     if _engine is None:
         _engine = build_engine()
     return _engine
 
 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
-    global _session_factory  # noqa: PLW0603
+    global _session_factory
     if _session_factory is None:
         _session_factory = build_session_factory(get_engine())
     return _session_factory

@@ -9,7 +9,7 @@ Security model:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 from uuid import UUID
@@ -51,7 +51,7 @@ def create_access_token(
 ) -> str:
     """Create a signed JWT access token."""
     s = settings or get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if expires_delta:
         expire = now + expires_delta
     else:

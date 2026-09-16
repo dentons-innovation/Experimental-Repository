@@ -89,9 +89,7 @@ class TestTaskList:
             f"/api/v1/projects/{proj['id']}/tasks",
             json={"title": "Backlog task", "status": "backlog"},
         )
-        resp = await api_client.get(
-            f"/api/v1/projects/{proj['id']}/tasks?status=todo"
-        )
+        resp = await api_client.get(f"/api/v1/projects/{proj['id']}/tasks?status=todo")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 1
@@ -119,9 +117,7 @@ class TestTaskList:
             f"/api/v1/projects/{proj['id']}/tasks",
             json={"title": "Unique searchable task xyz"},
         )
-        resp = await api_client.get(
-            f"/api/v1/projects/{proj['id']}/tasks?search=xyz"
-        )
+        resp = await api_client.get(f"/api/v1/projects/{proj['id']}/tasks?search=xyz")
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 

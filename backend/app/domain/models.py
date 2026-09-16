@@ -25,14 +25,13 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
-from typing import Optional, cast
+from typing import cast
 
 try:
     import uuid_extensions
 except ImportError:
     uuid_extensions = None
 from sqlalchemy import (
-    BigInteger,
     Boolean,
     Date,
     DateTime,
@@ -40,7 +39,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -57,10 +55,10 @@ from app.domain.enums import (
     WorkspaceRole,
 )
 
-
 # ─────────────────────────────────────────────────────────────
 # Base classes
 # ─────────────────────────────────────────────────────────────
+
 
 class Base(DeclarativeBase):
     pass
@@ -69,7 +67,7 @@ class Base(DeclarativeBase):
 def _uuid7() -> uuid.UUID:
     """Generate a UUIDv7 — time-ordered, globally unique."""
     if hasattr(uuid, "uuid7"):
-        return cast(uuid.UUID, getattr(uuid, "uuid7")())
+        return cast(uuid.UUID, uuid.uuid7())
     if uuid_extensions is not None:
         return cast(uuid.UUID, uuid_extensions.uuid7())
     return uuid.uuid4()
@@ -78,6 +76,7 @@ def _uuid7() -> uuid.UUID:
 # ─────────────────────────────────────────────────────────────
 # User
 # ─────────────────────────────────────────────────────────────
+
 
 class User(Base):
     """Internal user record."""
@@ -95,7 +94,7 @@ class User(Base):
     )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    avatar_url: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -119,6 +118,7 @@ class User(Base):
 # Workspace
 # ─────────────────────────────────────────────────────────────
 
+
 class Workspace(Base):
     __tablename__ = "workspaces"
 
@@ -127,7 +127,7 @@ class Workspace(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
@@ -153,9 +153,7 @@ class Workspace(Base):
         back_populates="workspace", cascade="all, delete-orphan"
     )
 
-    __table_args__ = (
-        Index("idx_workspaces_owner_id", "owner_id"),
-    )
+    __table_args__ = (Index("idx_workspaces_owner_id", "owner_id"),)
 
 
 class WorkspaceMember(Base):
@@ -195,6 +193,7 @@ class WorkspaceMember(Base):
 # Project
 # ─────────────────────────────────────────────────────────────
 
+
 class Project(Base):
     __tablename__ = "projects"
 
@@ -208,7 +207,7 @@ class Project(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -270,6 +269,7 @@ class ProjectMember(Base):
 # Label
 # ─────────────────────────────────────────────────────────────
 
+
 class Label(Base):
     __tablename__ = "labels"
 
@@ -299,6 +299,7 @@ class Label(Base):
 # Task
 # ─────────────────────────────────────────────────────────────
 
+
 class Task(Base):
     """Core task entity.
 
@@ -326,7 +327,7 @@ class Task(Base):
         nullable=False,
     )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(
         Enum(TaskStatus, name="task_status"),
         nullable=False,
@@ -337,7 +338,7 @@ class Task(Base):
         nullable=False,
         default=TaskPriority.MEDIUM,
     )
-    assignee_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -347,7 +348,7 @@ class Task(Base):
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    due_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # OCC version counter — starts at 0, incremented on every update
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
@@ -362,9 +363,7 @@ class Task(Base):
 
     project: Mapped[Project] = relationship(back_populates="tasks")
     workspace: Mapped[Workspace] = relationship("Workspace")
-    assignee: Mapped[Optional[User]] = relationship(
-        "User", foreign_keys=[assignee_id]
-    )
+    assignee: Mapped[User | None] = relationship("User", foreign_keys=[assignee_id])
     creator: Mapped[User] = relationship("User", foreign_keys=[creator_id])
     task_labels: Mapped[list[TaskLabel]] = relationship(
         back_populates="task", cascade="all, delete-orphan"
@@ -429,6 +428,7 @@ class TaskLabel(Base):
 # Comment
 # ─────────────────────────────────────────────────────────────
 
+
 class Comment(Base):
     __tablename__ = "comments"
 
@@ -470,6 +470,7 @@ class Comment(Base):
 # Activity Log
 # ─────────────────────────────────────────────────────────────
 
+
 class ActivityLog(Base):
     """Append-only event log for task mutations.
 
@@ -505,8 +506,8 @@ class ActivityLog(Base):
     action: Mapped[ActivityAction] = mapped_column(
         Enum(ActivityAction, name="activity_action"), nullable=False
     )
-    old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -516,6 +517,8 @@ class ActivityLog(Base):
 
     __table_args__ = (
         Index("idx_activity_logs_task_id_created_at", "task_id", "created_at"),
-        Index("idx_activity_logs_workspace_id_created_at", "workspace_id", "created_at"),
+        Index(
+            "idx_activity_logs_workspace_id_created_at", "workspace_id", "created_at"
+        ),
         Index("idx_activity_logs_project_id_created_at", "project_id", "created_at"),
     )
