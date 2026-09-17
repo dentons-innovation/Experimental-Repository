@@ -10,6 +10,8 @@ import structlog
 from app.domain.enums import ActivityAction, TaskPriority, TaskStatus
 from app.domain.exceptions import NotFoundError, OptimisticLockError
 from app.domain.models import ActivityLog, Task
+from app.infrastructure.realtime.publisher import RealtimeEventPublisher
+from app.infrastructure.realtime.types import RealtimeEvent
 from app.repositories.activity_repository import ActivityRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.task_repository import TaskFilters, TaskRepository
@@ -29,12 +31,14 @@ class TaskService:
         workspace_repo: WorkspaceRepository,
         activity_repo: ActivityRepository,
         auth_service: AuthorizationService,
+        publisher: RealtimeEventPublisher,
     ) -> None:
         self._task_repo = task_repo
         self._proj_repo = project_repo
         self._ws_repo = workspace_repo
         self._activity_repo = activity_repo
         self._auth = auth_service
+        self._publisher = publisher
 
     async def create_task(
         self,
@@ -88,6 +92,17 @@ class TaskService:
         # Reload with eager-loaded associations
         loaded = await self._task_repo.get_by_id_with_details(task.id)
         assert loaded is not None
+
+        # Publish event after successful DB operation
+        await self._publisher.publish(
+            RealtimeEvent(
+                channel=f"project:{loaded.project_id}",
+                event_type="task.created",
+                payload={"task_id": str(loaded.id), "title": loaded.title},
+                exclude_user_id=creator_id,
+            )
+        )
+
         return loaded
 
     async def list_tasks(
@@ -205,6 +220,17 @@ class TaskService:
         # Reload fresh state
         updated = await self._task_repo.get_by_id_with_details(task_id)
         assert updated is not None
+
+        # Publish event after successful DB operation
+        await self._publisher.publish(
+            RealtimeEvent(
+                channel=f"project:{updated.project_id}",
+                event_type="task.updated",
+                payload={"task_id": str(task_id)},
+                exclude_user_id=user_id,
+            )
+        )
+
         return updated
 
     async def delete_task(self, task_id: UUID, user_id: UUID) -> None:
@@ -212,7 +238,19 @@ class TaskService:
         if task is None:
             raise NotFoundError("Task", str(task_id))
         await self._auth.can_delete_task(user_id, task)
+
+        project_id = task.project_id
         await self._task_repo.delete(task)
+
+        # Publish event after successful DB operation
+        await self._publisher.publish(
+            RealtimeEvent(
+                channel=f"project:{project_id}",
+                event_type="task.deleted",
+                payload={"task_id": str(task_id)},
+                exclude_user_id=user_id,
+            )
+        )
 
     async def add_label(self, task_id: UUID, label_id: UUID, user_id: UUID) -> Task:
         task = await self._task_repo.get_by_id_with_details(task_id)

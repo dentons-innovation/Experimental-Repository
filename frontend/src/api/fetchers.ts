@@ -19,6 +19,7 @@ import type {
   TaskPriority,
   TaskStatus,
   User,
+  UserConnection,
   Workspace,
   WorkspaceMember,
 } from "@/types";
@@ -43,6 +44,34 @@ export const authApi = {
 
 export const usersApi = {
   me: (): Promise<User> => apiClient.get("/users/me").then((r) => r.data),
+};
+
+// ─────────────────────────────────────────────────────────────
+// Connections
+// ─────────────────────────────────────────────────────────────
+
+export const connectionsApi = {
+  searchUsers: (query: string): Promise<PaginatedResponse<User>> =>
+    apiClient
+      .get("/connections/users/search", { params: { q: query } })
+      .then((r) => r.data),
+
+  list: (): Promise<UserConnection[]> =>
+    apiClient.get("/connections").then((r) => r.data),
+
+  sendRequest: (receiverId: string): Promise<UserConnection> =>
+    apiClient
+      .post("/connections", { receiver_id: receiverId })
+      .then((r) => r.data),
+
+  accept: (connectionId: string): Promise<UserConnection> =>
+    apiClient.post(`/connections/${connectionId}/accept`).then((r) => r.data),
+
+  reject: (connectionId: string): Promise<void> =>
+    apiClient.post(`/connections/${connectionId}/reject`).then((r) => r.data),
+
+  remove: (connectionId: string): Promise<void> =>
+    apiClient.delete(`/connections/${connectionId}`).then((r) => r.data),
 };
 
 // ─────────────────────────────────────────────────────────────

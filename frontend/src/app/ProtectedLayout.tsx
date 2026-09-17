@@ -8,10 +8,14 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import { Sidebar } from "@/components/Sidebar";
+import { useRealtimeInvalidation } from "@/hooks/useRealtimeInvalidation";
 
 export function ProtectedLayout() {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+
+  // Attach realtime cache invalidations
+  useRealtimeInvalidation();
 
   if (isLoading) {
     return (

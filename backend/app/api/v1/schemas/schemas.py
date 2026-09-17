@@ -95,6 +95,10 @@ class AddWorkspaceMemberRequest(BaseModel):
     role: WorkspaceRole = WorkspaceRole.MEMBER
 
 
+class UpdateWorkspaceMemberRequest(BaseModel):
+    role: WorkspaceRole
+
+
 # ─────────────────────────────────────────────────────────────
 # Project schemas
 # ─────────────────────────────────────────────────────────────
@@ -138,6 +142,10 @@ class ProjectMemberResponse(BaseModel):
 class AddProjectMemberRequest(BaseModel):
     user_id: UUID
     role: ProjectRole = ProjectRole.MEMBER
+
+
+class UpdateProjectMemberRequest(BaseModel):
+    role: ProjectRole
 
 
 # ─────────────────────────────────────────────────────────────

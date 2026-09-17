@@ -7,8 +7,10 @@ from uuid import uuid4
 
 import pytest
 
+from app.domain.enums import ActivityAction
 from app.domain.exceptions import NotFoundError
 from app.domain.models import Comment, Task
+from app.infrastructure.realtime.publisher import NoOpEventPublisher
 from app.services.comment_service import CommentService
 
 
@@ -49,7 +51,9 @@ def _make_service(
     auth.can_edit_comment = AsyncMock()
     auth.can_delete_comment = AsyncMock()
 
-    return CommentService(comment_repo, task_repo, activity_repo, auth)
+    return CommentService(
+        comment_repo, task_repo, activity_repo, auth, NoOpEventPublisher()
+    )
 
 
 class TestCommentService:

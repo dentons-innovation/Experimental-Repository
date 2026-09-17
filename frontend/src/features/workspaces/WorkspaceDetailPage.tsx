@@ -16,12 +16,12 @@ import {
   LoadingSpinner,
   ErrorMessage,
   EmptyState,
-  Avatar,
   Modal,
   FormField,
   Input,
   Textarea,
 } from "@/components/ui";
+import { WorkspaceMembersPanel } from "./WorkspaceMembersPanel";
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
   if (!error) return fallback;
@@ -233,15 +233,20 @@ export function WorkspaceDetailPage() {
             >
               <Users size={14} className="text-secondary" />
               <span className="text-secondary">Members:</span>
-              <div style={{ display: "flex", gap: "4px" }}>
-                {members?.map((m) => (
-                  <span key={m.id} title={`${m.user.full_name} (${m.role})`}>
-                    <Avatar user={m.user} size="sm" />
-                  </span>
-                ))}
-              </div>
+              <span>{members?.length || 0}</span>
             </div>
           </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "var(--space-6)",
+            marginBottom: "var(--space-6)",
+          }}
+        >
+          <WorkspaceMembersPanel workspace={workspace} />
         </div>
 
         {/* Projects Section */}

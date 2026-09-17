@@ -19,6 +19,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { TaskDetailModal } from "@/features/tasks/TaskDetailModal";
+import { ProjectMembersPanel } from "./ProjectMembersPanel";
 
 const COLUMNS: TaskStatus[] = ["todo", "in_progress", "in_review", "done"];
 
@@ -303,6 +304,17 @@ export function ProjectBoardPage() {
       </div>
 
       <div className="page-content">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "var(--space-6)",
+            marginBottom: "var(--space-6)",
+          }}
+        >
+          <ProjectMembersPanel project={project} />
+        </div>
+
         {/* Filter Toolbar */}
         <div
           className="card mb-6"

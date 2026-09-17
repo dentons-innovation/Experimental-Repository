@@ -8,8 +8,9 @@ from uuid import uuid4
 import pytest
 
 from app.domain.enums import ProjectRole
-from app.domain.exceptions import ConflictError, NotFoundError
+from app.domain.exceptions import ConflictError, NotFoundError, ValidationError
 from app.domain.models import Project, ProjectMember
+from app.infrastructure.realtime.publisher import NoOpEventPublisher
 from app.services.project_service import ProjectService, _slugify
 
 
@@ -48,6 +49,7 @@ def _make_service(
     proj_repo.session.refresh = AsyncMock()
 
     ws_repo = MagicMock()
+    ws_repo.get_member = AsyncMock(return_value=MagicMock())
     user_repo = MagicMock()
     user_repo.get_by_id = AsyncMock(return_value=target_user)
 
@@ -58,7 +60,7 @@ def _make_service(
     auth.can_delete_project = AsyncMock()
     auth.can_manage_project_members = AsyncMock()
 
-    return ProjectService(proj_repo, ws_repo, user_repo, auth)
+    return ProjectService(proj_repo, ws_repo, user_repo, auth, NoOpEventPublisher())
 
 
 class TestProjectSlugify:

@@ -10,6 +10,7 @@ import pytest
 from app.domain.enums import WorkspaceRole
 from app.domain.exceptions import ConflictError, NotFoundError
 from app.domain.models import Workspace, WorkspaceMember
+from app.infrastructure.realtime.publisher import NoOpEventPublisher
 from app.services.workspace_service import WorkspaceService, _slugify
 
 
@@ -54,7 +55,7 @@ def _make_service(
     auth.require_workspace_member = AsyncMock()
     auth.require_workspace_owner = AsyncMock()
 
-    return WorkspaceService(ws_repo, user_repo, auth)
+    return WorkspaceService(ws_repo, user_repo, auth, NoOpEventPublisher())
 
 
 class TestSlugify:

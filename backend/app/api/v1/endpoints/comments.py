@@ -9,6 +9,8 @@ from fastapi import APIRouter, Response, status
 from app.api.v1.schemas.common import PaginatedResponse
 from app.api.v1.schemas.schemas import CommentCreate, CommentResponse, CommentUpdate
 from app.core.dependencies import CurrentUserId, DbSession, Pagination
+from app.core.realtime_deps import get_event_publisher
+from app.infrastructure.realtime.publisher import RealtimeEventPublisher
 from app.repositories.activity_repository import ActivityRepository
 from app.repositories.comment_repository import CommentRepository
 from app.repositories.project_repository import ProjectRepository
@@ -16,18 +18,21 @@ from app.repositories.task_repository import TaskRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.services.authorization import AuthorizationService
 from app.services.comment_service import CommentService
+from fastapi import Depends
 
 router = APIRouter(tags=["comments"])
 
 
-def _make_service(session: DbSession) -> CommentService:
+def _make_service(
+    session: DbSession, publisher: RealtimeEventPublisher
+) -> CommentService:
     ws_repo = WorkspaceRepository(session)
     proj_repo = ProjectRepository(session)
     task_repo = TaskRepository(session)
     comment_repo = CommentRepository(session)
     activity_repo = ActivityRepository(session)
     auth = AuthorizationService(ws_repo, proj_repo)
-    return CommentService(comment_repo, task_repo, activity_repo, auth)
+    return CommentService(comment_repo, task_repo, activity_repo, auth, publisher)
 
 
 @router.post(
@@ -40,8 +45,9 @@ async def create_comment(
     payload: CommentCreate,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> CommentResponse:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     comment = await svc.create_comment(task_id, user_id, payload.body)
     return CommentResponse.model_validate(comment)
 
@@ -55,8 +61,9 @@ async def list_comments(
     user_id: CurrentUserId,
     session: DbSession,
     pagination: Pagination,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> PaginatedResponse[CommentResponse]:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     comments, total = await svc.list_comments(
         task_id, user_id, offset=pagination.offset, limit=pagination.limit
     )
@@ -74,8 +81,9 @@ async def update_comment(
     payload: CommentUpdate,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> CommentResponse:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     comment = await svc.update_comment(comment_id, user_id, payload.body)
     return CommentResponse.model_validate(comment)
 
@@ -85,7 +93,8 @@ async def delete_comment(
     comment_id: UUID,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> Response:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     await svc.delete_comment(comment_id, user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

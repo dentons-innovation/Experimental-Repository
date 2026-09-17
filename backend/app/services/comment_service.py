@@ -7,6 +7,8 @@ from uuid import UUID
 from app.domain.enums import ActivityAction
 from app.domain.exceptions import NotFoundError
 from app.domain.models import Comment
+from app.infrastructure.realtime.publisher import RealtimeEventPublisher
+from app.infrastructure.realtime.types import RealtimeEvent
 from app.repositories.activity_repository import ActivityRepository
 from app.repositories.comment_repository import CommentRepository
 from app.repositories.task_repository import TaskRepository
@@ -20,11 +22,13 @@ class CommentService:
         task_repo: TaskRepository,
         activity_repo: ActivityRepository,
         auth_service: AuthorizationService,
+        publisher: RealtimeEventPublisher,
     ) -> None:
         self._comment_repo = comment_repo
         self._task_repo = task_repo
         self._activity_repo = activity_repo
         self._auth = auth_service
+        self._publisher = publisher
 
     async def create_comment(
         self, task_id: UUID, author_id: UUID, body: str
@@ -49,6 +53,20 @@ class CommentService:
 
         loaded = await self._comment_repo.get_by_id_with_author(comment.id)
         assert loaded is not None
+
+        # Publish event after successful DB operation
+        await self._publisher.publish(
+            RealtimeEvent(
+                channel=f"project:{task.project_id}",
+                event_type="comment.created",
+                payload={
+                    "comment_id": str(loaded.id),
+                    "task_id": str(task_id),
+                },
+                exclude_user_id=author_id,
+            )
+        )
+
         return loaded
 
     async def list_comments(
@@ -89,6 +107,20 @@ class CommentService:
 
         loaded = await self._comment_repo.get_by_id_with_author(comment.id)
         assert loaded is not None
+
+        # Publish event after successful DB operation
+        await self._publisher.publish(
+            RealtimeEvent(
+                channel=f"project:{task.project_id}",
+                event_type="comment.updated",
+                payload={
+                    "comment_id": str(loaded.id),
+                    "task_id": str(task.id),
+                },
+                exclude_user_id=user_id,
+            )
+        )
+
         return loaded
 
     async def delete_comment(self, comment_id: UUID, user_id: UUID) -> None:
@@ -109,4 +141,17 @@ class CommentService:
             project_id=task.project_id,
             actor_id=user_id,
             action=ActivityAction.COMMENT_DELETED,
+        )
+
+        # Publish event after successful DB operation
+        await self._publisher.publish(
+            RealtimeEvent(
+                channel=f"project:{task.project_id}",
+                event_type="comment.deleted",
+                payload={
+                    "comment_id": str(comment_id),
+                    "task_id": str(task.id),
+                },
+                exclude_user_id=user_id,
+            )
         )

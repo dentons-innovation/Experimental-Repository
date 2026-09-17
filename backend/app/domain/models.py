@@ -33,6 +33,7 @@ except ImportError:
     uuid_extensions = None
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -49,6 +50,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from app.domain.enums import (
     ActivityAction,
+    ConnectionStatus,
     ProjectRole,
     TaskPriority,
     TaskStatus,
@@ -117,6 +119,81 @@ class User(Base):
     )
     project_memberships: Mapped[list[ProjectMember]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# User Connection (friend/contact relationship)
+# ─────────────────────────────────────────────────────────────
+
+
+class UserConnection(Base):
+    """Bidirectional user-to-user connection with canonical pair ordering.
+
+    Design:
+    - ``user_lo`` and ``user_hi`` form a canonical pair where user_lo < user_hi
+      (lexicographic UUID comparison).  This means that regardless of which
+      direction the request was sent, there is exactly one row per pair.
+    - ``requester_id`` stores who initiated the request (must be one of the pair).
+    - A UNIQUE(user_lo, user_hi) constraint prevents both duplicate directional
+      and reciprocal requests at the database level, even under concurrent races.
+    - A CHECK(user_lo < user_hi) constraint enforces canonical ordering so
+      application bugs cannot insert (B, A) instead of (A, B).
+    """
+
+    __tablename__ = "user_connections"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=_uuid7
+    )
+    user_lo: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_hi: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    requester_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    status: Mapped[ConnectionStatus] = mapped_column(
+        Enum(
+            ConnectionStatus,
+            name="connection_status",
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+        default=ConnectionStatus.PENDING,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user_lo_rel: Mapped[User] = relationship("User", foreign_keys=[user_lo])
+    user_hi_rel: Mapped[User] = relationship("User", foreign_keys=[user_hi])
+    requester: Mapped[User] = relationship("User", foreign_keys=[requester_id])
+
+    __table_args__ = (
+        UniqueConstraint("user_lo", "user_hi", name="uq_user_connections_pair"),
+        CheckConstraint("user_lo < user_hi", name="ck_user_connections_canonical"),
+        CheckConstraint(
+            "requester_id IN (user_lo, user_hi)",
+            name="ck_user_connections_requester_in_pair",
+        ),
+        Index("idx_user_connections_user_lo", "user_lo"),
+        Index("idx_user_connections_user_hi", "user_hi"),
+        Index("idx_user_connections_status", "status"),
     )
 
 
