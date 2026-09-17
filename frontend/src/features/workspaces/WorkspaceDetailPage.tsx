@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,12 +16,13 @@ import {
   LoadingSpinner,
   ErrorMessage,
   EmptyState,
-  Avatar,
   Modal,
   FormField,
   Input,
   Textarea,
 } from "@/components/ui";
+import { useWebSocket } from "@/contexts/WebSocketContext";
+import { WorkspaceMembersPanel } from "./WorkspaceMembersPanel";
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
   if (!error) return fallback;
@@ -36,6 +37,16 @@ export function WorkspaceDetailPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { joinChannel, leaveChannel } = useWebSocket();
+
+  useEffect(() => {
+    if (workspaceId) {
+      joinChannel(`workspace:${workspaceId}`);
+      return () => {
+        leaveChannel(`workspace:${workspaceId}`);
+      };
+    }
+  }, [workspaceId, joinChannel, leaveChannel]);
 
   // Create project state
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
@@ -233,15 +244,20 @@ export function WorkspaceDetailPage() {
             >
               <Users size={14} className="text-secondary" />
               <span className="text-secondary">Members:</span>
-              <div style={{ display: "flex", gap: "4px" }}>
-                {members?.map((m) => (
-                  <span key={m.id} title={`${m.user.full_name} (${m.role})`}>
-                    <Avatar user={m.user} size="sm" />
-                  </span>
-                ))}
-              </div>
+              <span>{members?.length || 0}</span>
             </div>
           </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "var(--space-6)",
+            marginBottom: "var(--space-6)",
+          }}
+        >
+          <WorkspaceMembersPanel workspace={workspace} />
         </div>
 
         {/* Projects Section */}

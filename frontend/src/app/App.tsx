@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider } from "react-router-dom";
 import { AuthProvider } from "@/features/auth/AuthContext";
+import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { router } from "./router";
 
 const queryClient = new QueryClient({
@@ -34,10 +35,12 @@ const queryClient = new QueryClient({
 export function App() {
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        {import.meta.env.DEV && <ReactQueryDevtools />}
-      </QueryClientProvider>
+      <WebSocketProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+          {import.meta.env.DEV && <ReactQueryDevtools />}
+        </QueryClientProvider>
+      </WebSocketProvider>
     </AuthProvider>
   );
 }

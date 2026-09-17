@@ -17,6 +17,7 @@ import { WorkspacesPage } from "@/features/workspaces/WorkspacesPage";
 import { WorkspaceDetailPage } from "@/features/workspaces/WorkspaceDetailPage";
 import { ProjectBoardPage } from "@/features/projects/ProjectBoardPage";
 import { TaskDetailPage } from "@/features/tasks/TaskDetailPage";
+import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { SignInPage } from "@/features/auth/SignInPage";
 
 export const router = createBrowserRouter([
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
       { path: "workspaces/:workspaceId", element: <WorkspaceDetailPage /> },
       { path: "projects/:projectId", element: <ProjectBoardPage /> },
       { path: "tasks/:taskId", element: <TaskDetailPage /> },
+      { path: "connections", element: <ConnectionsPage /> },
     ],
   },
 ]);

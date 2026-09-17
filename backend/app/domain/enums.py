@@ -61,3 +61,11 @@ class ActivityAction(str, enum.Enum):
     COMMENT_DELETED = "comment_deleted"
     TITLE_CHANGED = "title_changed"
     DESCRIPTION_CHANGED = "description_changed"
+
+
+class ConnectionStatus(str, enum.Enum):
+    """User-to-user connection request states."""
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"

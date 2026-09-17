@@ -6,8 +6,10 @@ import re
 from uuid import UUID
 
 from app.domain.enums import ProjectRole
-from app.domain.exceptions import ConflictError, NotFoundError
+from app.domain.exceptions import ConflictError, NotFoundError, ValidationError
 from app.domain.models import Project, ProjectMember
+from app.infrastructure.realtime.publisher import RealtimeEventPublisher
+from app.infrastructure.realtime.types import RealtimeEvent
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.workspace_repository import WorkspaceRepository
@@ -31,11 +33,13 @@ class ProjectService:
         workspace_repo: WorkspaceRepository,
         user_repo: UserRepository,
         auth_service: AuthorizationService,
+        publisher: RealtimeEventPublisher,
     ) -> None:
         self._proj_repo = project_repo
         self._ws_repo = workspace_repo
         self._user_repo = user_repo
         self._auth = auth_service
+        self._publisher = publisher
 
     async def create_project(
         self,
@@ -133,11 +137,43 @@ class ProjectService:
         if target is None:
             raise NotFoundError("User", str(target_user_id))
 
+        # Enforce ProjectMember => WorkspaceMember invariant
+        ws_member = await self._ws_repo.get_member(project.workspace_id, target_user_id)
+        if ws_member is None:
+            raise ValidationError(
+                "User must be a workspace member before being added to a project",
+                field="user_id",
+            )
+
         existing = await self._proj_repo.get_member(project_id, target_user_id)
         if existing:
             raise ConflictError("User is already a member of this project")
 
-        return await self._proj_repo.add_member(project_id, target_user_id, role)
+        member = await self._proj_repo.add_member(project_id, target_user_id, role)
+
+        # Publish to both project and user channels
+        event_payload = {
+            "project_id": str(project_id),
+            "workspace_id": str(project.workspace_id),
+            "user_id": str(target_user_id),
+            "role": role.value,
+        }
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"project:{project_id}",
+                    event_type="project.member_added",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="project.member_added",
+                    payload=event_payload,
+                ),
+            ]
+        )
+
+        return member
 
     async def remove_member(
         self, project_id: UUID, requester_id: UUID, target_user_id: UUID
@@ -152,6 +188,72 @@ class ProjectService:
             raise NotFoundError("ProjectMember")
 
         await self._proj_repo.remove_member(member)
+
+        # Publish to both project and user channels
+        event_payload = {
+            "project_id": str(project_id),
+            "workspace_id": str(project.workspace_id),
+            "user_id": str(target_user_id),
+        }
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"project:{project_id}",
+                    event_type="project.member_removed",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="project.member_removed",
+                    payload=event_payload,
+                ),
+            ]
+        )
+
+    async def update_member_role(
+        self,
+        project_id: UUID,
+        requester_id: UUID,
+        target_user_id: UUID,
+        new_role: ProjectRole,
+    ) -> ProjectMember:
+        """Change a member's role within the project."""
+        project = await self._proj_repo.get_by_id_with_members(project_id)
+        if project is None:
+            raise NotFoundError("Project", str(project_id))
+        await self._auth.can_manage_project_members(requester_id, project)
+
+        member = await self._proj_repo.get_member(project_id, target_user_id)
+        if member is None:
+            raise NotFoundError("ProjectMember")
+
+        member.role = new_role
+        await self._proj_repo.session.flush()
+        await self._proj_repo.session.refresh(member)
+
+        # Publish role change event
+        event_payload = {
+            "project_id": str(project_id),
+            "workspace_id": str(project.workspace_id),
+            "user_id": str(target_user_id),
+            "new_role": new_role.value,
+        }
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"project:{project_id}",
+                    event_type="project.member_role_changed",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="project.member_role_changed",
+                    payload=event_payload,
+                ),
+            ]
+        )
+
+        return member
 
     async def list_members(
         self, project_id: UUID, requester_id: UUID

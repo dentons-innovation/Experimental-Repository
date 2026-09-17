@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, ArrowLeft, Filter, Edit2, Trash2 } from "lucide-react";
@@ -18,7 +18,9 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import { TaskDetailModal } from "@/features/tasks/TaskDetailModal";
+import { ProjectMembersPanel } from "./ProjectMembersPanel";
 
 const COLUMNS: TaskStatus[] = ["todo", "in_progress", "in_review", "done"];
 
@@ -35,6 +37,16 @@ export function ProjectBoardPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { joinChannel, leaveChannel } = useWebSocket();
+
+  useEffect(() => {
+    if (projectId) {
+      joinChannel(`project:${projectId}`);
+      return () => {
+        leaveChannel(`project:${projectId}`);
+      };
+    }
+  }, [projectId, joinChannel, leaveChannel]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -303,6 +315,17 @@ export function ProjectBoardPage() {
       </div>
 
       <div className="page-content">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "var(--space-6)",
+            marginBottom: "var(--space-6)",
+          }}
+        >
+          <ProjectMembersPanel project={project} />
+        </div>
+
         {/* Filter Toolbar */}
         <div
           className="card mb-6"

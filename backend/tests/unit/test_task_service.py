@@ -10,6 +10,8 @@ import pytest
 from app.domain.enums import TaskPriority, TaskStatus
 from app.domain.exceptions import NotFoundError, OptimisticLockError
 from app.domain.models import Project, Task
+from app.infrastructure.realtime.publisher import NoOpEventPublisher
+from app.repositories.task_repository import TaskFilters
 from app.services.task_service import TaskService
 
 
@@ -68,7 +70,9 @@ def _make_service(
     auth.can_delete_task = AsyncMock()
     auth.require_project_member = AsyncMock(return_value=MagicMock())
 
-    return TaskService(task_repo, proj_repo, ws_repo, activity_repo, auth)
+    return TaskService(
+        task_repo, proj_repo, ws_repo, activity_repo, auth, NoOpEventPublisher()
+    )
 
 
 class TestCreateTask:
@@ -261,7 +265,6 @@ class TestTaskLabels:
 
 class TestListTasks:
     async def test_list_tasks_success(self):
-        from app.repositories.task_repository import TaskFilters
 
         task = _make_task()
         svc = _make_service(task=task)

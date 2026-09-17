@@ -63,6 +63,26 @@ export type ActivityAction =
 // Entity types
 // ─────────────────────────────────────────────────────────────
 
+export const ConnectionStatus = {
+  PENDING: "pending",
+  ACCEPTED: "accepted",
+  REJECTED: "rejected",
+} as const;
+export type ConnectionStatus =
+  (typeof ConnectionStatus)[keyof typeof ConnectionStatus];
+
+export interface UserConnection {
+  id: string;
+  user_lo: string;
+  user_hi: string;
+  requester_id: string;
+  status: ConnectionStatus;
+  created_at: string;
+  updated_at: string;
+  user_lo_rel: User;
+  user_hi_rel: User;
+}
+
 export interface User {
   id: string;
   email: string;

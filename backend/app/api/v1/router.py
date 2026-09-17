@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth,
     comments,
+    connections,
     health,
     labels,
     projects,
@@ -28,4 +29,5 @@ api_router.include_router(workspaces.router)
 api_router.include_router(projects.router)
 api_router.include_router(tasks.router)
 api_router.include_router(comments.router)
+api_router.include_router(connections.router)
 api_router.include_router(labels.router)

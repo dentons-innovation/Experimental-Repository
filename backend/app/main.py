@@ -45,6 +45,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from app.core.database import init_db
 
     await init_db()
+
+    # ── Real-time infrastructure ─────────────────────────────
+    from app.infrastructure.auth import get_jwt_verifier
+    from app.infrastructure.realtime.manager import (
+        RealtimeConnectionManager,
+        RealtimeSubscriptionManager,
+    )
+    from app.infrastructure.realtime.publisher import InProcessEventPublisher
+
+    conn_manager = RealtimeConnectionManager()
+    sub_manager = RealtimeSubscriptionManager()
+    publisher = InProcessEventPublisher(sub_manager)
+
+    app.state.realtime_conn_manager = conn_manager
+    app.state.realtime_sub_manager = sub_manager
+    app.state.realtime_publisher = publisher
+    app.state.jwt_verifier = get_jwt_verifier()
+
     yield
     logger.info("application_shutdown")
 
@@ -75,6 +93,11 @@ def create_app() -> FastAPI:
     # ── Routers ──────────────────────────────────────────────
     app.include_router(health_router)  # /health, /readiness
     app.include_router(api_router)  # /api/v1/...
+
+    # ── WebSocket ────────────────────────────────────────────
+    from app.infrastructure.realtime.router import ws_router
+
+    app.include_router(ws_router)
 
     # ── Exception handlers ───────────────────────────────────
     _register_exception_handlers(app)

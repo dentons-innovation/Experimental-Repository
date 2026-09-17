@@ -6,8 +6,10 @@ import re
 from uuid import UUID
 
 from app.domain.enums import WorkspaceRole
-from app.domain.exceptions import ConflictError, NotFoundError
+from app.domain.exceptions import ConflictError, NotFoundError, ValidationError
 from app.domain.models import Workspace, WorkspaceMember
+from app.infrastructure.realtime.publisher import RealtimeEventPublisher
+from app.infrastructure.realtime.types import RealtimeEvent
 from app.repositories.user_repository import UserRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.services.authorization import AuthorizationService
@@ -31,10 +33,12 @@ class WorkspaceService:
         workspace_repo: WorkspaceRepository,
         user_repo: UserRepository,
         auth_service: AuthorizationService,
+        publisher: RealtimeEventPublisher,
     ) -> None:
         self._ws_repo = workspace_repo
         self._user_repo = user_repo
         self._auth = auth_service
+        self._publisher = publisher
 
     async def create_workspace(
         self,
@@ -121,12 +125,35 @@ class WorkspaceService:
         if target is None:
             raise NotFoundError("User", str(target_user_id))
 
-        # Idempotency: if already a member, return existing
+        # Check for existing membership
         existing = await self._ws_repo.get_member(workspace_id, target_user_id)
         if existing:
             raise ConflictError("User is already a member of this workspace")
 
-        return await self._ws_repo.add_member(workspace_id, target_user_id, role)
+        member = await self._ws_repo.add_member(workspace_id, target_user_id, role)
+
+        # Publish to both workspace and user channels
+        event_payload = {
+            "workspace_id": str(workspace_id),
+            "user_id": str(target_user_id),
+            "role": role.value,
+        }
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"workspace:{workspace_id}",
+                    event_type="workspace.member_added",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="workspace.member_added",
+                    payload=event_payload,
+                ),
+            ]
+        )
+
+        return member
 
     async def remove_member(
         self,
@@ -146,6 +173,64 @@ class WorkspaceService:
             raise NotFoundError("WorkspaceMember")
 
         await self._ws_repo.remove_member(member)
+
+        # Publish to both workspace and user channels
+        event_payload = {
+            "workspace_id": str(workspace_id),
+            "user_id": str(target_user_id),
+        }
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"workspace:{workspace_id}",
+                    event_type="workspace.member_removed",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="workspace.member_removed",
+                    payload=event_payload,
+                ),
+            ]
+        )
+
+    async def update_member_role(
+        self,
+        workspace_id: UUID,
+        requester_id: UUID,
+        target_user_id: UUID,
+        new_role: WorkspaceRole,
+    ) -> WorkspaceMember:
+        """Change a member's role within the workspace."""
+        await self._auth.require_workspace_owner(requester_id, workspace_id)
+
+        # Cannot change the owner's role
+        workspace = await self._ws_repo.get_by_id_with_members(workspace_id)
+        if workspace and workspace.owner_id == target_user_id:
+            raise ValidationError("Cannot change the workspace owner's role")
+
+        member = await self._ws_repo.get_member(workspace_id, target_user_id)
+        if member is None:
+            raise NotFoundError("WorkspaceMember")
+
+        member.role = new_role
+        await self._ws_repo.session.flush()
+        await self._ws_repo.session.refresh(member)
+
+        # Publish role change event
+        await self._publisher.publish(
+            RealtimeEvent(
+                channel=f"workspace:{workspace_id}",
+                event_type="workspace.member_role_changed",
+                payload={
+                    "workspace_id": str(workspace_id),
+                    "user_id": str(target_user_id),
+                    "new_role": new_role.value,
+                },
+            )
+        )
+
+        return member
 
     async def list_members(
         self, workspace_id: UUID, requester_id: UUID

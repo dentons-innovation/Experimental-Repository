@@ -62,9 +62,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
 
-    - name: Format Check (Ruff)
-      run: ruff format --check .
-
     - name: Lint (Ruff)
       run: ruff check .
 

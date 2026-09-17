@@ -19,6 +19,7 @@ import type {
   TaskPriority,
   TaskStatus,
   User,
+  UserConnection,
   Workspace,
   WorkspaceMember,
 } from "@/types";
@@ -35,6 +36,9 @@ export const authApi = {
     apiClient.post("/auth/register", payload).then((r) => r.data),
 
   me: (): Promise<User> => apiClient.get("/auth/me").then((r) => r.data),
+
+  getWsTicket: (): Promise<string> =>
+    apiClient.post("/auth/ws-ticket").then((r) => r.data.ticket),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -43,6 +47,53 @@ export const authApi = {
 
 export const usersApi = {
   me: (): Promise<User> => apiClient.get("/users/me").then((r) => r.data),
+};
+
+// ─────────────────────────────────────────────────────────────
+// Connections
+// ─────────────────────────────────────────────────────────────
+
+export const connectionsApi = {
+  searchUsers: (query: string): Promise<PaginatedResponse<User>> =>
+    apiClient
+      .get("/connections/users/search", { params: { q: query } })
+      .then((r) => r.data),
+
+  list: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<UserConnection>> =>
+    apiClient.get("/connections", { params }).then((r) => r.data),
+
+  listPendingIncoming: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<UserConnection>> =>
+    apiClient
+      .get("/connections/pending/incoming", { params })
+      .then((r) => r.data),
+
+  listPendingOutgoing: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<UserConnection>> =>
+    apiClient
+      .get("/connections/pending/outgoing", { params })
+      .then((r) => r.data),
+
+  sendRequest: (receiverId: string): Promise<UserConnection> =>
+    apiClient
+      .post("/connections", { receiver_id: receiverId })
+      .then((r) => r.data),
+
+  accept: (connectionId: string): Promise<UserConnection> =>
+    apiClient.post(`/connections/${connectionId}/accept`).then((r) => r.data),
+
+  reject: (connectionId: string): Promise<void> =>
+    apiClient.post(`/connections/${connectionId}/reject`).then((r) => r.data),
+
+  remove: (connectionId: string): Promise<void> =>
+    apiClient.delete(`/connections/${connectionId}`).then((r) => r.data),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -90,6 +141,15 @@ export const workspacesApi = {
     apiClient
       .delete(`/workspaces/${workspaceId}/members/${userId}`)
       .then(() => undefined),
+
+  updateMemberRole: (
+    workspaceId: string,
+    userId: string,
+    payload: { role: string },
+  ): Promise<WorkspaceMember> =>
+    apiClient
+      .put(`/workspaces/${workspaceId}/members/${userId}`, payload)
+      .then((r) => r.data),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -138,6 +198,15 @@ export const projectsApi = {
     apiClient
       .delete(`/projects/${projectId}/members/${userId}`)
       .then(() => undefined),
+
+  updateMemberRole: (
+    projectId: string,
+    userId: string,
+    payload: { role: string },
+  ): Promise<ProjectMember> =>
+    apiClient
+      .put(`/projects/${projectId}/members/${userId}`, payload)
+      .then((r) => r.data),
 };
 
 // ─────────────────────────────────────────────────────────────

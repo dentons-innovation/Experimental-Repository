@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi import APIRouter, status
 
 from app.api.v1.schemas.schemas import (
@@ -11,6 +13,7 @@ from app.api.v1.schemas.schemas import (
     UserResponse,
 )
 from app.core.dependencies import CurrentUserId, DbSession
+from app.infrastructure.auth import create_access_token
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 
@@ -80,3 +83,22 @@ async def get_me(
     service = _auth_service(session)
     user = await service.get_by_id(user_id)
     return UserResponse.model_validate(user)
+
+
+@router.post(
+    "/ws-ticket",
+    summary="Generate a short-lived ticket for WebSocket connection handshake",
+)
+async def create_ws_ticket(
+    user_id: CurrentUserId,
+    session: DbSession,
+) -> dict[str, str]:
+    service = _auth_service(session)
+    user = await service.get_by_id(user_id)
+    ticket = create_access_token(
+        user_id=user.id,
+        email=user.email,
+        username=user.username,
+        expires_delta=timedelta(seconds=60),
+    )
+    return {"ticket": ticket}

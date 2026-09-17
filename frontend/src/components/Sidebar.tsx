@@ -5,7 +5,7 @@
 import { useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-import { LayoutGrid, FolderOpen, LogOut } from "lucide-react";
+import { LayoutGrid, FolderOpen, LogOut, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/api/queryKeys";
 import { workspacesApi } from "@/api/fetchers";
@@ -60,6 +60,13 @@ export function Sidebar() {
           >
             <LayoutGrid size={16} />
             Workspaces
+          </Link>
+          <Link
+            to="/connections"
+            className={`sidebar-nav-item ${isActive("/connections") ? "active" : ""}`}
+          >
+            <Users size={16} />
+            Connections
           </Link>
         </nav>
       </div>

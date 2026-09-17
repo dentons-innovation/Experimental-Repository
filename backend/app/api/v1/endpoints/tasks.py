@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.v1.schemas.common import PaginatedResponse
 from app.api.v1.schemas.schemas import (
@@ -16,7 +16,9 @@ from app.api.v1.schemas.schemas import (
     TaskUpdate,
 )
 from app.core.dependencies import CurrentUserId, DbSession, Pagination
+from app.core.realtime_deps import get_event_publisher
 from app.domain.enums import TaskPriority, TaskStatus
+from app.infrastructure.realtime.publisher import RealtimeEventPublisher
 from app.repositories.activity_repository import ActivityRepository
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.task_repository import TaskFilters, TaskRepository
@@ -27,13 +29,13 @@ from app.services.task_service import UNSET, TaskService
 router = APIRouter(tags=["tasks"])
 
 
-def _make_service(session: DbSession) -> TaskService:
+def _make_service(session: DbSession, publisher: RealtimeEventPublisher) -> TaskService:
     ws_repo = WorkspaceRepository(session)
     proj_repo = ProjectRepository(session)
     task_repo = TaskRepository(session)
     activity_repo = ActivityRepository(session)
     auth = AuthorizationService(ws_repo, proj_repo)
-    return TaskService(task_repo, proj_repo, ws_repo, activity_repo, auth)
+    return TaskService(task_repo, proj_repo, ws_repo, activity_repo, auth, publisher)
 
 
 @router.post(
@@ -46,8 +48,9 @@ async def create_task(
     payload: TaskCreate,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> TaskResponse:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     task = await svc.create_task(
         project_id=project_id,
         creator_id=user_id,
@@ -78,8 +81,9 @@ async def list_tasks(
     search: str | None = None,
     sort_by: str = "created_at",
     sort_order: str = "desc",
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> PaginatedResponse[TaskResponse]:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     filters = TaskFilters(
         status=list(status),
         priority=list(priority),
@@ -105,8 +109,9 @@ async def get_task(
     task_id: UUID,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> TaskResponse:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     task = await svc.get_task(task_id, user_id)
     return TaskResponse.model_validate(task)
 
@@ -117,8 +122,9 @@ async def update_task(
     payload: TaskUpdate,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> TaskResponse:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     task = await svc.update_task(
         task_id=task_id,
         user_id=user_id,
@@ -140,8 +146,9 @@ async def delete_task(
     task_id: UUID,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> Response:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     await svc.delete_task(task_id, user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -156,8 +163,9 @@ async def add_task_label(
     payload: TaskLabelRequest,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> TaskResponse:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     task = await svc.add_label(task_id, payload.label_id, user_id)
     return TaskResponse.model_validate(task)
 
@@ -172,8 +180,9 @@ async def remove_task_label(
     label_id: UUID,
     user_id: CurrentUserId,
     session: DbSession,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> TaskResponse:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     task = await svc.remove_label(task_id, label_id, user_id)
     return TaskResponse.model_validate(task)
 
@@ -187,8 +196,9 @@ async def get_task_activity(
     user_id: CurrentUserId,
     session: DbSession,
     pagination: Pagination,
+    publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> PaginatedResponse[ActivityLogResponse]:
-    svc = _make_service(session)
+    svc = _make_service(session, publisher)
     logs, total = await svc.list_activity(
         task_id, user_id, offset=pagination.offset, limit=pagination.limit
     )
