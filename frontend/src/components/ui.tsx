@@ -3,10 +3,7 @@
  */
 
 import type { TaskPriority, TaskStatus, User } from "@/types";
-import {
-  TASK_PRIORITY_LABELS,
-  TASK_STATUS_LABELS,
-} from "@/types";
+import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/types";
 
 // ─────────────────────────────────────────────────────────────
 // Status Badge
@@ -49,7 +46,8 @@ interface AvatarProps {
 }
 
 export function Avatar({ user, size = "md" }: AvatarProps) {
-  const sizeClass = size === "sm" ? "avatar-sm" : size === "lg" ? "avatar-lg" : "";
+  const sizeClass =
+    size === "sm" ? "avatar-sm" : size === "lg" ? "avatar-lg" : "";
 
   if (!user) {
     return <div className={`avatar ${sizeClass}`}>?</div>;
@@ -105,20 +103,29 @@ export function LabelChip({ name, color }: { name: string; color: string }) {
 export function LoadingSpinner({ fullPage = false }: { fullPage?: boolean }) {
   if (fullPage) {
     return (
-      <div className="loading-center" style={{ minHeight: "60vh" }}>
+      <div
+        className="loading-center"
+        role="status"
+        aria-label="Loading"
+        style={{ minHeight: "60vh" }}
+      >
         <div className="spinner" style={{ width: 36, height: 36 }} />
       </div>
     );
   }
   return (
-    <div className="loading-center">
+    <div className="loading-center" role="status" aria-label="Loading">
       <div className="spinner" />
     </div>
   );
 }
 
 export function ErrorMessage({ message }: { message: string }) {
-  return <div className="error-state">{message}</div>;
+  return (
+    <div className="error-state" role="alert">
+      {message}
+    </div>
+  );
 }
 
 export function EmptyState({
@@ -141,3 +148,16 @@ export function EmptyState({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// Modal & Form Primitives
+// ─────────────────────────────────────────────────────────────
+export { Modal, ModalHeader, ModalBody, ModalFooter } from "./Modal";
+export type { ModalProps } from "./Modal";
+export { FormField, Input, Textarea, Select } from "./FormField";
+export type {
+  FormFieldProps,
+  InputProps,
+  TextareaProps,
+  SelectProps,
+} from "./FormField";

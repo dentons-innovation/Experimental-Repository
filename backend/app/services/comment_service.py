@@ -48,7 +48,7 @@ class CommentService:
         )
 
         loaded = await self._comment_repo.get_by_id_with_author(comment.id)
-        assert loaded is not None  # noqa: S101
+        assert loaded is not None
         return loaded
 
     async def list_comments(
@@ -87,7 +87,9 @@ class CommentService:
             action=ActivityAction.COMMENT_EDITED,
         )
 
-        return comment
+        loaded = await self._comment_repo.get_by_id_with_author(comment.id)
+        assert loaded is not None
+        return loaded
 
     async def delete_comment(self, comment_id: UUID, user_id: UUID) -> None:
         comment = await self._comment_repo.get_by_id_with_author(comment_id)

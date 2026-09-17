@@ -30,9 +30,7 @@ class LabelRepository(BaseRepository[Label]):
 
     async def list_for_workspace(self, workspace_id: UUID) -> list[Label]:
         result = await self.session.execute(
-            select(Label)
-            .where(Label.workspace_id == workspace_id)
-            .order_by(Label.name)
+            select(Label).where(Label.workspace_id == workspace_id).order_by(Label.name)
         )
         return list(result.scalars().all())
 

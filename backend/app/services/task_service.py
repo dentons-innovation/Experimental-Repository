@@ -18,6 +18,8 @@ from app.services.authorization import AuthorizationService
 
 logger = structlog.get_logger(__name__)
 
+UNSET: object = object()
+
 
 class TaskService:
     def __init__(
@@ -85,7 +87,7 @@ class TaskService:
 
         # Reload with eager-loaded associations
         loaded = await self._task_repo.get_by_id_with_details(task.id)
-        assert loaded is not None  # noqa: S101
+        assert loaded is not None
         return loaded
 
     async def list_tasks(
@@ -114,7 +116,7 @@ class TaskService:
         user_id: UUID,
         expected_version: int,
         title: str | None = None,
-        description: str | None = None,
+        description: str | object | None = UNSET,
         status: TaskStatus | None = None,
         priority: TaskPriority | None = None,
         assignee_id: UUID | None = None,
@@ -136,14 +138,12 @@ class TaskService:
         activity_entries: list[tuple[ActivityAction, str | None, str | None]] = []
 
         if title is not None and title != task.title:
-            activity_entries.append(
-                (ActivityAction.TITLE_CHANGED, task.title, title)
-            )
+            activity_entries.append((ActivityAction.TITLE_CHANGED, task.title, title))
             updates["title"] = title
 
-        if description is not None and description != task.description:
+        if description is not UNSET and description != task.description:
             activity_entries.append(
-                (ActivityAction.DESCRIPTION_CHANGED, task.description, description)
+                (ActivityAction.DESCRIPTION_CHANGED, task.description, description)  # type: ignore[arg-type]
             )
             updates["description"] = description
 
@@ -204,7 +204,7 @@ class TaskService:
 
         # Reload fresh state
         updated = await self._task_repo.get_by_id_with_details(task_id)
-        assert updated is not None  # noqa: S101
+        assert updated is not None
         return updated
 
     async def delete_task(self, task_id: UUID, user_id: UUID) -> None:
@@ -214,9 +214,7 @@ class TaskService:
         await self._auth.can_delete_task(user_id, task)
         await self._task_repo.delete(task)
 
-    async def add_label(
-        self, task_id: UUID, label_id: UUID, user_id: UUID
-    ) -> Task:
+    async def add_label(self, task_id: UUID, label_id: UUID, user_id: UUID) -> Task:
         task = await self._task_repo.get_by_id_with_details(task_id)
         if task is None:
             raise NotFoundError("Task", str(task_id))
@@ -230,13 +228,12 @@ class TaskService:
             action=ActivityAction.LABEL_ADDED,
             new_value=str(label_id),
         )
+        self._task_repo.session.expire(task)
         loaded = await self._task_repo.get_by_id_with_details(task_id)
-        assert loaded is not None  # noqa: S101
+        assert loaded is not None
         return loaded
 
-    async def remove_label(
-        self, task_id: UUID, label_id: UUID, user_id: UUID
-    ) -> Task:
+    async def remove_label(self, task_id: UUID, label_id: UUID, user_id: UUID) -> Task:
         task = await self._task_repo.get_by_id_with_details(task_id)
         if task is None:
             raise NotFoundError("Task", str(task_id))
@@ -250,8 +247,9 @@ class TaskService:
             action=ActivityAction.LABEL_REMOVED,
             old_value=str(label_id),
         )
+        self._task_repo.session.expire(task)
         loaded = await self._task_repo.get_by_id_with_details(task_id)
-        assert loaded is not None  # noqa: S101
+        assert loaded is not None
         return loaded
 
     async def list_activity(

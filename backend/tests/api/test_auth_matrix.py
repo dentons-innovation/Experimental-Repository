@@ -10,7 +10,6 @@ These tests systematically verify that:
 
 from __future__ import annotations
 
-import pytest
 from httpx import AsyncClient
 
 
@@ -18,9 +17,7 @@ class TestUnauthenticated:
     """All protected endpoints require authentication."""
 
     async def test_workspaces_requires_auth(self, api_client: AsyncClient):
-        resp = await api_client.get(
-            "/api/v1/workspaces", headers={"Authorization": ""}
-        )
+        resp = await api_client.get("/api/v1/workspaces", headers={"Authorization": ""})
         assert resp.status_code == 401
 
     async def test_invalid_token_rejected(self, api_client: AsyncClient):
@@ -35,21 +32,15 @@ class TestUnauthenticated:
 class TestCrossWorkspaceAccess:
     """Users cannot access resources in workspaces they don't belong to."""
 
-    async def test_non_member_cannot_see_other_workspace(
-        self, api_client_factory
-    ):
+    async def test_non_member_cannot_see_other_workspace(self, api_client_factory):
         # User A creates a workspace
-        client_a, user_a = await api_client_factory(
-            "clerk_a", "a@example.com", "userA"
-        )
+        client_a, user_a = await api_client_factory("clerk_a", "a@example.com", "userA")
         ws = (
             await client_a.post("/api/v1/workspaces", json={"name": "Private WS"})
         ).json()
 
         # User B tries to access it
-        client_b, user_b = await api_client_factory(
-            "clerk_b", "b@example.com", "userB"
-        )
+        client_b, user_b = await api_client_factory("clerk_b", "b@example.com", "userB")
         resp = await client_b.get(f"/api/v1/workspaces/{ws['id']}")
         # Returns 404 to prevent enumeration
         assert resp.status_code == 404
@@ -58,9 +49,7 @@ class TestCrossWorkspaceAccess:
         self, api_client_factory
     ):
         client_a, _ = await api_client_factory("clerk_c1", "c1@example.com", "userc1")
-        ws = (
-            await client_a.post("/api/v1/workspaces", json={"name": "WS C"})
-        ).json()
+        ws = (await client_a.post("/api/v1/workspaces", json={"name": "WS C"})).json()
 
         client_b, _ = await api_client_factory("clerk_c2", "c2@example.com", "userc2")
         resp = await client_b.post(
@@ -101,7 +90,9 @@ class TestProjectMemberPermissions:
             "clerk_padm1", "padm1@test.com", "padm1"
         )
         ws = (
-            await client_admin.post("/api/v1/workspaces", json={"name": "WS for Task Delete"})
+            await client_admin.post(
+                "/api/v1/workspaces", json={"name": "WS for Task Delete"}
+            )
         ).json()
         proj = (
             await client_admin.post(

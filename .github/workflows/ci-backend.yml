@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Lint, Typecheck, and Test
@@ -35,7 +42,7 @@ jobs:
       TEST_DATABASE_SYNC_URL: postgresql+psycopg2://projectflow:projectflow@localhost:5432/projectflow_test
       DATABASE_URL: postgresql+asyncpg://projectflow:projectflow@localhost:5432/projectflow_test
       DATABASE_SYNC_URL: postgresql+psycopg2://projectflow:projectflow@localhost:5432/projectflow_test
-      JWT_SECRET_KEY: test-secret-key-12345
+      JWT_SECRET_KEY: test-secret-key-at-least-32-bytes-long-for-hmac
       CORS_ORIGINS: http://localhost:5173
 
     steps:
@@ -46,7 +53,9 @@ jobs:
       with:
         python-version: '3.12'
         cache: 'pip'
-        cache-dependency-path: './backend/requirements-dev.txt'
+        cache-dependency-path: |
+          ./backend/requirements.txt
+          ./backend/requirements-dev.txt
 
     - name: Install dependencies
       run: |
@@ -69,4 +78,4 @@ jobs:
       run: alembic upgrade head
 
     - name: Test (pytest)
-      run: pytest tests/unit tests/api -v --cov=app --cov-branch --cov-report=xml --cov-fail-under=85
+      run: pytest tests/ -v --cov=app --cov-branch --cov-report=xml --cov-fail-under=85

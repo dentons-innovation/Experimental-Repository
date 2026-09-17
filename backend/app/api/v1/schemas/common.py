@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from typing import Generic, TypeVar
-from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 DataT = TypeVar("DataT")
 
@@ -26,9 +25,11 @@ class PaginatedResponse(BaseModel, Generic[DataT]):
         total: int,
         page: int,
         page_size: int,
-    ) -> "PaginatedResponse[DataT]":
+    ) -> PaginatedResponse[DataT]:
         pages = max(1, -(-total // page_size))  # ceil division
-        return cls(items=items, total=total, page=page, page_size=page_size, pages=pages)
+        return cls(
+            items=items, total=total, page=page, page_size=page_size, pages=pages
+        )
 
 
 class ErrorDetail(BaseModel):

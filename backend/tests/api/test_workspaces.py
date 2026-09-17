@@ -6,7 +6,6 @@ Each test is isolated by transaction rollback.
 
 from __future__ import annotations
 
-import pytest
 from httpx import AsyncClient
 
 
@@ -101,6 +100,21 @@ class TestWorkspaceUpdate:
         assert resp.status_code == 200
         assert resp.json()["name"] == "New Name"
 
+    async def test_update_workspace_clear_description(self, api_client: AsyncClient):
+        created = (
+            await api_client.post(
+                "/api/v1/workspaces",
+                json={"name": "WS Desc", "description": "Initial desc"},
+            )
+        ).json()
+        assert created["description"] == "Initial desc"
+        resp = await api_client.patch(
+            f"/api/v1/workspaces/{created['id']}",
+            json={"description": None},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["description"] is None
+
 
 class TestWorkspaceDelete:
     async def test_owner_can_delete_workspace(self, api_client: AsyncClient):
@@ -129,3 +143,32 @@ class TestWorkspaceMembers:
         members = resp.json()
         assert len(members) >= 1
         assert any(m["role"] == "owner" for m in members)
+
+    async def test_add_and_remove_member(self, api_client: AsyncClient):
+        reg_resp = await api_client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "colleague@example.com",
+                "username": "colleague",
+                "full_name": "Colleague",
+                "password": "strongpassword123",
+            },
+        )
+        assert reg_resp.status_code == 201
+        colleague_id = reg_resp.json()["user"]["id"]
+
+        ws = (
+            await api_client.post("/api/v1/workspaces", json={"name": "Team Space"})
+        ).json()
+
+        add_resp = await api_client.post(
+            f"/api/v1/workspaces/{ws['id']}/members",
+            json={"user_id": colleague_id, "role": "member"},
+        )
+        assert add_resp.status_code == 201
+        assert add_resp.json()["user"]["id"] == colleague_id
+
+        del_resp = await api_client.delete(
+            f"/api/v1/workspaces/{ws['id']}/members/{colleague_id}"
+        )
+        assert del_resp.status_code == 204

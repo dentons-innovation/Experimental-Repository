@@ -15,10 +15,10 @@ from app.domain.enums import (
     WorkspaceRole,
 )
 
-
 # ─────────────────────────────────────────────────────────────
 # User & Auth schemas
 # ─────────────────────────────────────────────────────────────
+
 
 class UserResponse(BaseModel):
     id: UUID
@@ -54,10 +54,13 @@ class TokenResponse(BaseModel):
 # Workspace schemas
 # ─────────────────────────────────────────────────────────────
 
+
 class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1000)
-    slug: str | None = Field(default=None, min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$")
+    slug: str | None = Field(
+        default=None, min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$"
+    )
 
 
 class WorkspaceUpdate(BaseModel):
@@ -96,10 +99,13 @@ class AddWorkspaceMemberRequest(BaseModel):
 # Project schemas
 # ─────────────────────────────────────────────────────────────
 
+
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1000)
-    slug: str | None = Field(default=None, min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$")
+    slug: str | None = Field(
+        default=None, min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$"
+    )
 
 
 class ProjectUpdate(BaseModel):
@@ -138,6 +144,7 @@ class AddProjectMemberRequest(BaseModel):
 # Label schemas
 # ─────────────────────────────────────────────────────────────
 
+
 class LabelCreate(BaseModel):
     name: str = Field(min_length=1, max_length=64)
     color: str = Field(
@@ -149,9 +156,7 @@ class LabelCreate(BaseModel):
 
 class LabelUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=64)
-    color: str | None = Field(
-        default=None, pattern=r"^#[0-9a-fA-F]{6}$"
-    )
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class LabelResponse(BaseModel):
@@ -166,6 +171,7 @@ class LabelResponse(BaseModel):
 # ─────────────────────────────────────────────────────────────
 # Task schemas
 # ─────────────────────────────────────────────────────────────
+
 
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=512)
@@ -216,6 +222,7 @@ class TaskLabelRequest(BaseModel):
 # Comment schemas
 # ─────────────────────────────────────────────────────────────
 
+
 class CommentCreate(BaseModel):
     body: str = Field(min_length=1, max_length=10000)
 
@@ -239,6 +246,7 @@ class CommentResponse(BaseModel):
 # ─────────────────────────────────────────────────────────────
 # Activity schemas
 # ─────────────────────────────────────────────────────────────
+
 
 class ActivityLogResponse(BaseModel):
     id: UUID

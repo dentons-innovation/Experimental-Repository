@@ -19,7 +19,7 @@ from app.repositories.project_repository import ProjectRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.services.authorization import AuthorizationService
-from app.services.workspace_service import WorkspaceService
+from app.services.workspace_service import UNSET, WorkspaceService
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -86,7 +86,12 @@ async def update_workspace(
 ) -> WorkspaceResponse:
     svc = _make_service(session)
     ws = await svc.update_workspace(
-        workspace_id, user_id, name=payload.name, description=payload.description
+        workspace_id,
+        user_id,
+        name=payload.name,
+        description=payload.description
+        if "description" in payload.model_fields_set
+        else UNSET,
     )
     return WorkspaceResponse.model_validate(ws)
 
@@ -125,9 +130,7 @@ async def add_workspace_member(
     session: DbSession,
 ) -> WorkspaceMemberResponse:
     svc = _make_service(session)
-    member = await svc.add_member(
-        workspace_id, user_id, payload.user_id, payload.role
-    )
+    member = await svc.add_member(workspace_id, user_id, payload.user_id, payload.role)
     return WorkspaceMemberResponse.model_validate(member)
 
 

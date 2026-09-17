@@ -13,11 +13,10 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 
+import structlog
 from fastapi import Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-
-import structlog
 
 logger = structlog.get_logger(__name__)
 
@@ -75,7 +74,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def setup_cors(app: "FastAPI", allowed_origins: list[str] | str) -> None:  # type: ignore[name-defined]  # noqa: F821
+def setup_cors(app: FastAPI, allowed_origins: list[str] | str) -> None:  # type: ignore[name-defined]  # noqa: F821
     """Configure CORS middleware with secure defaults."""
     if isinstance(allowed_origins, str):
         origins = [o.strip() for o in allowed_origins.split(",") if o.strip()]

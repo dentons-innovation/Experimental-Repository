@@ -18,24 +18,25 @@ Running:
 
 from __future__ import annotations
 
-import asyncio
 import os
 from collections.abc import AsyncGenerator
 from typing import Any
-from unittest.mock import MagicMock
 from uuid import UUID
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from app.core.config import Settings
-from app.core.database import build_engine, build_session_factory
 from app.domain.enums import ProjectRole, WorkspaceRole
-from app.domain.models import Base, Project, ProjectMember, User, Workspace, WorkspaceMember
-from app.infrastructure.auth import JWTVerifier
+from app.domain.models import (
+    Base,
+    Project,
+    ProjectMember,
+    User,
+    Workspace,
+    WorkspaceMember,
+)
 from app.main import create_app
 
 # ─────────────────────────────────────────────────────────────
@@ -56,10 +57,6 @@ TEST_DATABASE_SYNC_URL = os.environ.get(
 # Session-scoped: engine and schema setup
 # ─────────────────────────────────────────────────────────────
 
-@pytest.fixture(scope="session")
-def event_loop_policy():
-    return asyncio.DefaultEventLoopPolicy()
-
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
@@ -69,6 +66,7 @@ async def test_engine():
         TEST_DATABASE_URL,
         echo=False,
         connect_args=connect_args,
+        poolclass=NullPool,
     )
 
     async with engine.begin() as conn:
@@ -91,6 +89,7 @@ async def session_factory(test_engine):
 # Function-scoped: isolated session with transaction rollback
 # ─────────────────────────────────────────────────────────────
 
+
 @pytest_asyncio.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, Any]:
     """Provide an isolated, auto-rolled-back session for each test.
@@ -99,23 +98,27 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, Any]:
     without recreating the schema or truncating tables.
     """
     async with test_engine.connect() as connection:
-        await connection.begin()
+        trans = await connection.begin()
         session = AsyncSession(bind=connection, expire_on_commit=False)
         try:
             yield session
         finally:
             await session.close()
-            await connection.rollback()
+            if trans.is_active:
+                await trans.rollback()
 
 
 # ─────────────────────────────────────────────────────────────
 # Mock JWT verifier (for API tests)
 # ─────────────────────────────────────────────────────────────
 
+
 class MockJWTVerifier:
     """JWT verifier that accepts any token and returns a preset user UUID string."""
 
-    def __init__(self, user_id: UUID | str = "0191eb58-0000-7000-8000-000000000001") -> None:
+    def __init__(
+        self, user_id: UUID | str = "0191eb58-0000-7000-8000-000000000001"
+    ) -> None:
         self.user_id = str(user_id)
 
     def verify(self, token: str) -> str:
@@ -125,6 +128,7 @@ class MockJWTVerifier:
 # ─────────────────────────────────────────────────────────────
 # Test data builders
 # ─────────────────────────────────────────────────────────────
+
 
 async def create_user(
     session: AsyncSession,
@@ -234,13 +238,13 @@ async def add_project_member(
 # HTTPX async client for API tests
 # ─────────────────────────────────────────────────────────────
 
+
 @pytest_asyncio.fixture
 async def api_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, Any]:
     """Async HTTP client against the test app with DB session injection."""
     from app.core import dependencies
-    from app.infrastructure.auth import get_jwt_verifier
+    from app.infrastructure.auth import get_jwt_verifier, hash_password
     from app.repositories.user_repository import UserRepository
-    from app.infrastructure.auth import hash_password
 
     repo = UserRepository(db_session)
     user = await repo.create_user(
@@ -280,7 +284,9 @@ async def api_client_factory(db_session: AsyncSession):
 
     clients = []
 
-    async def make_client(user_identifier: str, email: str, username: str) -> tuple[AsyncClient, User]:
+    async def make_client(
+        user_identifier: str, email: str, username: str
+    ) -> tuple[AsyncClient, User]:
         repo = UserRepository(db_session)
         user = await repo.create_user(
             email=email,
@@ -298,9 +304,7 @@ async def api_client_factory(db_session: AsyncSession):
         app.dependency_overrides[dependencies.get_db_session] = override_db
         app.dependency_overrides[get_jwt_verifier] = lambda: mock_verifier
 
-        client = AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        )
+        client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
         client.headers["Authorization"] = "Bearer test-token"
         await client.__aenter__()
         clients.append((client, app))

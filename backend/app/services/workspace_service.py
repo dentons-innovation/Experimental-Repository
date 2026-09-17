@@ -22,6 +22,9 @@ def _slugify(name: str) -> str:
     return slug[:64]
 
 
+UNSET: object = object()
+
+
 class WorkspaceService:
     def __init__(
         self,
@@ -69,9 +72,7 @@ class WorkspaceService:
     ) -> tuple[list[Workspace], int]:
         return await self._ws_repo.list_for_user(user_id, offset=offset, limit=limit)
 
-    async def get_workspace(
-        self, workspace_id: UUID, user_id: UUID
-    ) -> Workspace:
+    async def get_workspace(self, workspace_id: UUID, user_id: UUID) -> Workspace:
         await self._auth.require_workspace_member(user_id, workspace_id)
         workspace = await self._ws_repo.get_by_id_with_members(workspace_id)
         if workspace is None:
@@ -83,7 +84,7 @@ class WorkspaceService:
         workspace_id: UUID,
         user_id: UUID,
         name: str | None = None,
-        description: str | None = None,
+        description: str | object | None = UNSET,
     ) -> Workspace:
         await self._auth.require_workspace_owner(user_id, workspace_id)
         workspace = await self._ws_repo.get_by_id_with_members(workspace_id)
@@ -92,16 +93,14 @@ class WorkspaceService:
 
         if name is not None:
             workspace.name = name
-        if description is not None:
-            workspace.description = description
+        if description is not UNSET:
+            workspace.description = description  # type: ignore[assignment]
 
         await self._ws_repo.session.flush()
         await self._ws_repo.session.refresh(workspace)
         return workspace
 
-    async def delete_workspace(
-        self, workspace_id: UUID, user_id: UUID
-    ) -> None:
+    async def delete_workspace(self, workspace_id: UUID, user_id: UUID) -> None:
         await self._auth.require_workspace_owner(user_id, workspace_id)
         workspace = await self._ws_repo.get_by_id_with_members(workspace_id)
         if workspace is None:

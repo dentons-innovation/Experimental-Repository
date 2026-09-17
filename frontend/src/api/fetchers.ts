@@ -70,7 +70,7 @@ export const workspacesApi = {
 
   update: (
     id: string,
-    payload: { name?: string; description?: string }
+    payload: { name?: string; description?: string | null },
   ): Promise<Workspace> =>
     apiClient.patch(`/workspaces/${id}`, payload).then((r) => r.data),
 
@@ -82,7 +82,7 @@ export const workspacesApi = {
 
   addMember: (
     id: string,
-    payload: { user_id: string; role: string }
+    payload: { user_id: string; role: string },
   ): Promise<WorkspaceMember> =>
     apiClient.post(`/workspaces/${id}/members`, payload).then((r) => r.data),
 
@@ -99,7 +99,7 @@ export const workspacesApi = {
 export const projectsApi = {
   list: (
     workspaceId: string,
-    params?: { page?: number; page_size?: number }
+    params?: { page?: number; page_size?: number },
   ): Promise<PaginatedResponse<Project>> =>
     apiClient
       .get(`/workspaces/${workspaceId}/projects`, { params })
@@ -110,7 +110,7 @@ export const projectsApi = {
 
   create: (
     workspaceId: string,
-    payload: { name: string; description?: string; slug?: string }
+    payload: { name: string; description?: string; slug?: string },
   ): Promise<Project> =>
     apiClient
       .post(`/workspaces/${workspaceId}/projects`, payload)
@@ -118,7 +118,7 @@ export const projectsApi = {
 
   update: (
     id: string,
-    payload: { name?: string; description?: string }
+    payload: { name?: string; description?: string | null },
   ): Promise<Project> =>
     apiClient.patch(`/projects/${id}`, payload).then((r) => r.data),
 
@@ -130,7 +130,7 @@ export const projectsApi = {
 
   addMember: (
     id: string,
-    payload: { user_id: string; role: string }
+    payload: { user_id: string; role: string },
   ): Promise<ProjectMember> =>
     apiClient.post(`/projects/${id}/members`, payload).then((r) => r.data),
 
@@ -159,7 +159,7 @@ export interface TaskListParams {
 export const tasksApi = {
   list: (
     projectId: string,
-    params?: TaskListParams
+    params?: TaskListParams,
   ): Promise<PaginatedResponse<Task>> =>
     apiClient
       .get(`/projects/${projectId}/tasks`, { params })
@@ -178,7 +178,7 @@ export const tasksApi = {
       assignee_id?: string;
       due_date?: string;
       label_ids?: string[];
-    }
+    },
   ): Promise<Task> =>
     apiClient.post(`/projects/${projectId}/tasks`, payload).then((r) => r.data),
 
@@ -192,7 +192,7 @@ export const tasksApi = {
       priority?: TaskPriority;
       assignee_id?: string | null;
       due_date?: string | null;
-    }
+    },
   ): Promise<Task> =>
     apiClient.patch(`/tasks/${id}`, payload).then((r) => r.data),
 
@@ -209,7 +209,7 @@ export const tasksApi = {
 
   getActivity: (
     taskId: string,
-    params?: { page?: number; page_size?: number }
+    params?: { page?: number; page_size?: number },
   ): Promise<PaginatedResponse<import("@/types").ActivityLog>> =>
     apiClient.get(`/tasks/${taskId}/activity`, { params }).then((r) => r.data),
 };
@@ -221,7 +221,7 @@ export const tasksApi = {
 export const commentsApi = {
   list: (
     taskId: string,
-    params?: { page?: number; page_size?: number }
+    params?: { page?: number; page_size?: number },
   ): Promise<PaginatedResponse<Comment>> =>
     apiClient.get(`/tasks/${taskId}/comments`, { params }).then((r) => r.data),
 
@@ -245,7 +245,7 @@ export const labelsApi = {
 
   create: (
     workspaceId: string,
-    payload: { name: string; color?: string }
+    payload: { name: string; color?: string },
   ): Promise<Label> =>
     apiClient
       .post(`/workspaces/${workspaceId}/labels`, payload)
@@ -253,7 +253,7 @@ export const labelsApi = {
 
   update: (
     id: string,
-    payload: { name?: string; color?: string }
+    payload: { name?: string; color?: string },
   ): Promise<Label> =>
     apiClient.patch(`/labels/${id}`, payload).then((r) => r.data),
 

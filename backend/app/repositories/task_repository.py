@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from sqlalchemy import Row, and_, func, select, text, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.domain.enums import TaskPriority, TaskStatus
-from app.domain.models import Label, Task, TaskLabel
+from app.domain.models import Task, TaskLabel
 from app.repositories.base import BaseRepository
 
 
@@ -27,7 +27,14 @@ class TaskFilters:
     sort_order: str = "desc"
 
 
-ALLOWED_SORT_FIELDS = {"created_at", "updated_at", "due_date", "priority", "status", "title"}
+ALLOWED_SORT_FIELDS = {
+    "created_at",
+    "updated_at",
+    "due_date",
+    "priority",
+    "status",
+    "title",
+}
 PRIORITY_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
 
@@ -89,7 +96,9 @@ class TaskRepository(BaseRepository[Task]):
         total = count_result.scalar_one()
 
         # Apply sort
-        sort_field = filters.sort_by if filters.sort_by in ALLOWED_SORT_FIELDS else "created_at"
+        sort_field = (
+            filters.sort_by if filters.sort_by in ALLOWED_SORT_FIELDS else "created_at"
+        )
         sort_col = getattr(Task, sort_field)
         if filters.sort_order.lower() == "asc":
             base_query = base_query.order_by(sort_col.asc())
@@ -97,8 +106,7 @@ class TaskRepository(BaseRepository[Task]):
             base_query = base_query.order_by(sort_col.desc())
 
         result = await self.session.execute(
-            base_query
-            .options(
+            base_query.options(
                 selectinload(Task.labels),
                 selectinload(Task.assignee),
                 selectinload(Task.creator),

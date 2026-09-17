@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 # Current user extraction
 # ─────────────────────────────────────────────────────────────
 
+
 async def get_current_user_id(
     authorization: Annotated[str | None, Header()] = None,
     jwt_verifier: JWTVerifier = Depends(get_jwt_verifier),
@@ -83,6 +84,7 @@ CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
 # ─────────────────────────────────────────────────────────────
 # Pagination
 # ─────────────────────────────────────────────────────────────
+
 
 class PaginationParams:
     """Standard pagination query parameters."""

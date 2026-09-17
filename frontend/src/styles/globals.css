@@ -55,7 +55,8 @@
   --color-priority-critical: #ef4444;
 
   /* Typography */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
 
   /* Spacing */
@@ -96,6 +97,16 @@
   /* Layout */
   --sidebar-width: 240px;
   --header-height: 56px;
+
+  /* Token Aliases for cross-component compatibility */
+  --bg-surface: var(--color-surface);
+  --bg-surface-2: var(--color-surface-2);
+  --bg-card: var(--color-surface-2);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-tertiary);
+  --border-color: var(--color-border);
+  --border-subtle: var(--color-border-subtle);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -174,11 +185,12 @@ a {
 }
 
 .page-header {
-  height: var(--header-height);
-  padding: 0 var(--space-6);
+  min-height: 72px;
+  padding: 20px var(--space-6);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   position: sticky;
@@ -228,7 +240,6 @@ a {
   background: var(--color-brand-hover);
   border-color: var(--color-brand-hover);
   box-shadow: var(--shadow-brand);
-  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -288,9 +299,12 @@ a {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text);
-  padding: var(--space-2) var(--space-3);
+  padding: 10px 14px;
   font-size: 14px;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  line-height: 1.4;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   outline: none;
 }
 
@@ -305,15 +319,16 @@ a {
 
 .textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: 90px;
 }
 
-.input-label {
+.input-label,
+.label {
   display: block;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -321,7 +336,6 @@ a {
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
   margin-bottom: var(--space-4);
 }
 
@@ -333,15 +347,17 @@ a {
   padding: var(--space-5);
 }
 
-.card-hover {
-  transition: border-color var(--transition-base), transform var(--transition-base),
+.card-hover,
+.card-interactive {
+  transition:
+    border-color var(--transition-base),
     box-shadow var(--transition-base);
   cursor: pointer;
 }
 
-.card-hover:hover {
+.card-hover:hover,
+.card-interactive:hover {
   border-color: var(--color-brand);
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
@@ -434,7 +450,9 @@ a {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-center {
@@ -491,11 +509,12 @@ a {
 }
 
 /* Modal overlay */
-.modal-overlay {
+.modal-overlay,
+.modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
@@ -676,7 +695,6 @@ a {
 
 .task-card:hover {
   border-color: var(--color-brand);
-  transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
 
@@ -754,40 +772,80 @@ a {
 }
 
 /* Select */
-.select {
+select,
+.select,
+select.input {
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text);
-  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  padding: 9px 36px 9px 12px;
   font-size: 13px;
   cursor: pointer;
-  outline: none;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238888a0' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right var(--space-3) center;
-  transition: border-color var(--transition-fast);
+  background-position: right 12px center;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-.select:focus {
-  border-color: var(--color-brand);
+select::-ms-expand {
+  display: none;
+}
+
+select:focus,
+select:focus-visible,
+.select:focus,
+.select:focus-visible,
+select.input:focus,
+select.input:focus-visible {
+  outline: none !important;
+  border-color: var(--color-brand) !important;
+  box-shadow: 0 0 0 3px var(--color-brand-muted) !important;
+}
+
+select option {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  padding: 8px 12px;
 }
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Scrollbar */
@@ -810,20 +868,124 @@ a {
 }
 
 /* Utility classes */
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.justify-center { justify-content: center; }
-.gap-1 { gap: var(--space-1); }
-.gap-2 { gap: var(--space-2); }
-.gap-3 { gap: var(--space-3); }
-.gap-4 { gap: var(--space-4); }
-.w-full { width: 100%; }
-.text-sm { font-size: 12px; }
-.text-secondary { color: var(--color-text-secondary); }
-.font-semibold { font-weight: 600; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flex {
+  display: flex;
+}
+.flex-col {
+  flex-direction: column;
+}
+.items-center {
+  align-items: center;
+}
+.justify-between {
+  justify-content: space-between;
+}
+.justify-center {
+  justify-content: center;
+}
+.gap-1 {
+  gap: var(--space-1);
+}
+.gap-2 {
+  gap: var(--space-2);
+}
+.gap-3 {
+  gap: var(--space-3);
+}
+.gap-4 {
+  gap: var(--space-4);
+}
+.w-full {
+  width: 100%;
+}
+.text-sm {
+  font-size: 12px;
+}
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+.text-primary {
+  color: var(--color-brand);
+}
+.font-semibold {
+  font-weight: 600;
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Grid utilities */
+.grid {
+  display: grid;
+}
+.grid-auto-fill {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+.grid-cols-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+.grid-cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+.grid-cols-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+.grid-cols-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Spacing utilities */
+.mb-1 {
+  margin-bottom: var(--space-1);
+}
+.mb-2 {
+  margin-bottom: var(--space-2);
+}
+.mb-3 {
+  margin-bottom: var(--space-3);
+}
+.mb-4 {
+  margin-bottom: var(--space-4);
+}
+.mb-5 {
+  margin-bottom: var(--space-5);
+}
+.mb-6 {
+  margin-bottom: var(--space-6);
+}
+.mt-1 {
+  margin-top: var(--space-1);
+}
+.mt-2 {
+  margin-top: var(--space-2);
+}
+.mt-3 {
+  margin-top: var(--space-3);
+}
+.mt-4 {
+  margin-top: var(--space-4);
+}
+.mt-6 {
+  margin-top: var(--space-6);
+}
+
+.page-container {
+  padding: var(--space-6);
+  max-width: 1400px;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

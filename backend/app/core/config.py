@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AnyHttpUrl, Field, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -86,14 +86,13 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             v_stripped = v.strip()
             if v_stripped.startswith("[") and v_stripped.endswith("]"):
+                import contextlib
                 import json
 
-                try:
+                with contextlib.suppress(Exception):
                     loaded = json.loads(v_stripped)
                     if isinstance(loaded, list):
                         return [str(origin).strip() for origin in loaded]
-                except Exception:
-                    pass
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 

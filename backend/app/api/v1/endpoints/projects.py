@@ -19,7 +19,7 @@ from app.repositories.project_repository import ProjectRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.services.authorization import AuthorizationService
-from app.services.project_service import ProjectService
+from app.services.project_service import UNSET, ProjectService
 
 router = APIRouter(tags=["projects"])
 
@@ -96,7 +96,12 @@ async def update_project(
 ) -> ProjectResponse:
     svc = _make_service(session)
     project = await svc.update_project(
-        project_id, user_id, name=payload.name, description=payload.description
+        project_id,
+        user_id,
+        name=payload.name,
+        description=payload.description
+        if "description" in payload.model_fields_set
+        else UNSET,
     )
     return ProjectResponse.model_validate(project)
 
@@ -138,9 +143,7 @@ async def add_project_member(
     session: DbSession,
 ) -> ProjectMemberResponse:
     svc = _make_service(session)
-    member = await svc.add_member(
-        project_id, user_id, payload.user_id, payload.role
-    )
+    member = await svc.add_member(project_id, user_id, payload.user_id, payload.role)
     return ProjectMemberResponse.model_validate(member)
 
 
