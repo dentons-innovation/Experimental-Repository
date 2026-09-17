@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import Request
 
 from app.infrastructure.realtime.publisher import (
@@ -19,4 +21,4 @@ def get_event_publisher(request: Request) -> RealtimeEventPublisher:
     publisher = getattr(request.app.state, "realtime_publisher", None)
     if publisher is None:
         return NoOpEventPublisher()
-    return publisher  # type: ignore[return-value]
+    return cast(RealtimeEventPublisher, publisher)

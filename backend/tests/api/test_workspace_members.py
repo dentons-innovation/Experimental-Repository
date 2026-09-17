@@ -12,9 +12,7 @@ from tests.conftest import create_user, create_workspace
 
 @pytest.fixture
 async def other_user(db_session) -> User:
-    return await create_user(
-        db_session, "other", "other@test.com", "Other User"
-    )
+    return await create_user(db_session, "other", "other@test.com", "Other User")
 
 
 @pytest.fixture

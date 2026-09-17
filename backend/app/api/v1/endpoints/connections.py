@@ -29,10 +29,10 @@ def _make_service(
 
 @router.get("/users/search", response_model=PaginatedResponse[UserResponse])
 async def search_users(
+    user_id: CurrentUserId,
+    session: DbSession,
+    pagination: Pagination,
     q: str = Query(..., min_length=1, max_length=100),
-    user_id: CurrentUserId = ...,
-    session: DbSession = ...,
-    pagination: Pagination = ...,
     publisher: RealtimeEventPublisher = Depends(get_event_publisher),
 ) -> PaginatedResponse[UserResponse]:
     """Search for users by username, email, or full name."""

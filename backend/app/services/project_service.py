@@ -138,9 +138,7 @@ class ProjectService:
             raise NotFoundError("User", str(target_user_id))
 
         # Enforce ProjectMember => WorkspaceMember invariant
-        ws_member = await self._ws_repo.get_member(
-            project.workspace_id, target_user_id
-        )
+        ws_member = await self._ws_repo.get_member(project.workspace_id, target_user_id)
         if ws_member is None:
             raise ValidationError(
                 "User must be a workspace member before being added to a project",
@@ -160,18 +158,20 @@ class ProjectService:
             "user_id": str(target_user_id),
             "role": role.value,
         }
-        await self._publisher.publish_many([
-            RealtimeEvent(
-                channel=f"project:{project_id}",
-                event_type="project.member_added",
-                payload=event_payload,
-            ),
-            RealtimeEvent(
-                channel=f"user:{target_user_id}",
-                event_type="project.member_added",
-                payload=event_payload,
-            ),
-        ])
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"project:{project_id}",
+                    event_type="project.member_added",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="project.member_added",
+                    payload=event_payload,
+                ),
+            ]
+        )
 
         return member
 
@@ -195,18 +195,20 @@ class ProjectService:
             "workspace_id": str(project.workspace_id),
             "user_id": str(target_user_id),
         }
-        await self._publisher.publish_many([
-            RealtimeEvent(
-                channel=f"project:{project_id}",
-                event_type="project.member_removed",
-                payload=event_payload,
-            ),
-            RealtimeEvent(
-                channel=f"user:{target_user_id}",
-                event_type="project.member_removed",
-                payload=event_payload,
-            ),
-        ])
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"project:{project_id}",
+                    event_type="project.member_removed",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="project.member_removed",
+                    payload=event_payload,
+                ),
+            ]
+        )
 
     async def update_member_role(
         self,

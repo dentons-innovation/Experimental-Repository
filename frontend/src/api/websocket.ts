@@ -2,7 +2,7 @@ export interface RealtimeEvent {
   channel: string;
   event: string;
   data?: Record<string, unknown>;
-};
+}
 
 type EventListener = (event: RealtimeEvent) => void;
 

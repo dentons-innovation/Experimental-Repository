@@ -37,7 +37,9 @@ class RealtimeConnectionManager:
 
     def connect(self, user_id: UUID, ws: WebSocket) -> None:
         self._connections[user_id].add(ws)
-        logger.debug("ws_connected", user_id=str(user_id), total=len(self._connections[user_id]))
+        logger.debug(
+            "ws_connected", user_id=str(user_id), total=len(self._connections[user_id])
+        )
 
     def disconnect(self, user_id: UUID, ws: WebSocket) -> None:
         conns = self._connections.get(user_id)
@@ -132,6 +134,6 @@ class RealtimeSubscriptionManager:
     async def _safe_send(ws: WebSocket, message: str) -> None:
         try:
             await ws.send_text(message)
-        except Exception:
+        except Exception as exc:
             # Connection is broken; will be cleaned up on disconnect
-            pass
+            logger.debug("Failed to send websocket message", error=str(exc))

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.v1.schemas.common import PaginatedResponse
 from app.api.v1.schemas.schemas import (
@@ -25,7 +25,6 @@ from app.repositories.task_repository import TaskFilters, TaskRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.services.authorization import AuthorizationService
 from app.services.task_service import UNSET, TaskService
-from fastapi import Depends
 
 router = APIRouter(tags=["tasks"])
 

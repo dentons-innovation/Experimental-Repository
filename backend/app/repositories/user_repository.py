@@ -82,9 +82,7 @@ class UserRepository(BaseRepository[User]):
             filters.append(User.id != exclude_user_id)
 
         count_result = await self.session.execute(
-            select(func.count()).select_from(
-                select(User).where(*filters).subquery()
-            )
+            select(func.count()).select_from(select(User).where(*filters).subquery())
         )
         total = count_result.scalar_one()
 

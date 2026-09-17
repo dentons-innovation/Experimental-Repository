@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import pytest
 
-from app.domain.enums import ActivityAction
 from app.domain.exceptions import NotFoundError
 from app.domain.models import Comment, Task
 from app.infrastructure.realtime.publisher import NoOpEventPublisher

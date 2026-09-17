@@ -16,62 +16,60 @@ export function useRealtimeInvalidation() {
       // Handle workspace events
       if (channel.startsWith("workspace:")) {
         const workspaceId = channel.split(":")[1];
-
-        switch (eventName) {
-          case "workspace.updated":
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.workspaces.detail(workspaceId),
-            });
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.workspaces.list(),
-            });
-            break;
-          case "workspace.member_added":
-          case "workspace.member_removed":
-          case "workspace.member_updated":
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.workspaces.members(workspaceId),
-            });
-            break;
+        if (workspaceId) {
+          switch (eventName) {
+            case "workspace.updated":
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.workspaces.detail(workspaceId),
+              });
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.workspaces.list(),
+              });
+              break;
+            case "workspace.member_added":
+            case "workspace.member_removed":
+            case "workspace.member_updated":
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.workspaces.members(workspaceId),
+              });
+              break;
+          }
         }
       }
 
       // Handle project events
       if (channel.startsWith("project:")) {
         const projectId = channel.split(":")[1];
-
-        switch (eventName) {
-          case "project.updated":
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.projects.detail(projectId),
-            });
-            if (data?.workspace_id) {
+        if (projectId) {
+          switch (eventName) {
+            case "project.updated":
               queryClient.invalidateQueries({
-                queryKey: queryKeys.projects.list(data.workspace_id),
+                queryKey: queryKeys.projects.detail(projectId),
+              });
+              if (typeof data?.workspace_id === "string") {
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.projects.list(data.workspace_id),
+                });
+              }
+              break;
+            case "project.member_added":
+            case "project.member_removed":
+            case "project.member_updated":
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.projects.members(projectId),
+              });
+              break;
+          }
+
+          if (eventName.startsWith("task.")) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.tasks.list(projectId),
+            });
+            if (typeof data?.id === "string") {
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.tasks.detail(data.id),
               });
             }
-            break;
-          case "project.member_added":
-          case "project.member_removed":
-          case "project.member_updated":
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.projects.members(projectId),
-            });
-            break;
-        }
-      }
-
-      // Handle task events
-      if (channel.startsWith("project:")) {
-        const projectId = channel.split(":")[1];
-        if (eventName.startsWith("task.")) {
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.tasks.list(projectId),
-          });
-          if (data?.id) {
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.tasks.detail(data.id),
-            });
           }
         }
       }
@@ -79,7 +77,7 @@ export function useRealtimeInvalidation() {
       // Handle comment events
       if (channel.startsWith("task:")) {
         const taskId = channel.split(":")[1];
-        if (eventName.startsWith("comment.")) {
+        if (taskId && eventName.startsWith("comment.")) {
           queryClient.invalidateQueries({
             queryKey: queryKeys.comments.byTask(taskId),
           });

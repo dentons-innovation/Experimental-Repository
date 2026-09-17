@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.api.v1.schemas.common import PaginatedResponse
 from app.api.v1.schemas.schemas import (
@@ -23,7 +23,6 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.services.authorization import AuthorizationService
 from app.services.project_service import UNSET, ProjectService
-from fastapi import Depends
 
 router = APIRouter(tags=["projects"])
 

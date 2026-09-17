@@ -76,8 +76,8 @@ async def _check_channel_authorization(
         except ValueError:
             return False
         proj_repo = ProjectRepository(session)
-        member = await proj_repo.get_member(project_id, user_id)
-        return member is not None
+        proj_member = await proj_repo.get_member(project_id, user_id)
+        return proj_member is not None
 
     return False
 
@@ -113,9 +113,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             try:
                 msg = json.loads(raw)
             except json.JSONDecodeError:
-                await websocket.send_text(
-                    json.dumps({"error": "Invalid JSON"})
-                )
+                await websocket.send_text(json.dumps({"error": "Invalid JSON"}))
                 continue
 
             action = msg.get("action")
@@ -135,28 +133,34 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     )
                 if not authorized:
                     await websocket.send_text(
-                        json.dumps({
-                            "error": "Unauthorized",
-                            "channel": channel,
-                        })
+                        json.dumps(
+                            {
+                                "error": "Unauthorized",
+                                "channel": channel,
+                            }
+                        )
                     )
                     continue
 
                 sub_manager.subscribe(channel, user_id, websocket)
                 await websocket.send_text(
-                    json.dumps({
-                        "action": "subscribed",
-                        "channel": channel,
-                    })
+                    json.dumps(
+                        {
+                            "action": "subscribed",
+                            "channel": channel,
+                        }
+                    )
                 )
 
             elif action == "unsubscribe":
                 sub_manager.unsubscribe(channel, user_id, websocket)
                 await websocket.send_text(
-                    json.dumps({
-                        "action": "unsubscribed",
-                        "channel": channel,
-                    })
+                    json.dumps(
+                        {
+                            "action": "unsubscribed",
+                            "channel": channel,
+                        }
+                    )
                 )
             else:
                 await websocket.send_text(

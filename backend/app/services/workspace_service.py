@@ -138,18 +138,20 @@ class WorkspaceService:
             "user_id": str(target_user_id),
             "role": role.value,
         }
-        await self._publisher.publish_many([
-            RealtimeEvent(
-                channel=f"workspace:{workspace_id}",
-                event_type="workspace.member_added",
-                payload=event_payload,
-            ),
-            RealtimeEvent(
-                channel=f"user:{target_user_id}",
-                event_type="workspace.member_added",
-                payload=event_payload,
-            ),
-        ])
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"workspace:{workspace_id}",
+                    event_type="workspace.member_added",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="workspace.member_added",
+                    payload=event_payload,
+                ),
+            ]
+        )
 
         return member
 
@@ -177,18 +179,20 @@ class WorkspaceService:
             "workspace_id": str(workspace_id),
             "user_id": str(target_user_id),
         }
-        await self._publisher.publish_many([
-            RealtimeEvent(
-                channel=f"workspace:{workspace_id}",
-                event_type="workspace.member_removed",
-                payload=event_payload,
-            ),
-            RealtimeEvent(
-                channel=f"user:{target_user_id}",
-                event_type="workspace.member_removed",
-                payload=event_payload,
-            ),
-        ])
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"workspace:{workspace_id}",
+                    event_type="workspace.member_removed",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="workspace.member_removed",
+                    payload=event_payload,
+                ),
+            ]
+        )
 
     async def update_member_role(
         self,

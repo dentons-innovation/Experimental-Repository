@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from app.domain.enums import ProjectRole
-from app.domain.exceptions import ConflictError, NotFoundError, ValidationError
+from app.domain.exceptions import ConflictError, NotFoundError
 from app.domain.models import Project, ProjectMember
 from app.infrastructure.realtime.publisher import NoOpEventPublisher
 from app.services.project_service import ProjectService, _slugify

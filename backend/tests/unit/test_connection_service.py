@@ -11,7 +11,9 @@ from app.domain.models import UserConnection
 from app.services.connection_service import ConnectionService
 
 
-def _make_connection(status: ConnectionStatus = ConnectionStatus.PENDING) -> UserConnection:
+def _make_connection(
+    status: ConnectionStatus = ConnectionStatus.PENDING,
+) -> UserConnection:
     return UserConnection(
         id=uuid4(),
         user_lo=uuid4(),
@@ -94,7 +96,7 @@ class TestAcceptRequest:
 
         svc = _make_service(existing_connection=existing)
         await svc.accept_request(receiver_id, existing.id)
-        
+
         svc._conn_repo.update_status.assert_called_once_with(
             existing.id, ConnectionStatus.ACCEPTED
         )
@@ -116,7 +118,7 @@ class TestRejectRequest:
 
         svc = _make_service(existing_connection=existing)
         await svc.reject_request(receiver_id, existing.id)
-        
+
         svc._conn_repo.update_status.assert_called_once_with(
             existing.id, ConnectionStatus.REJECTED
         )

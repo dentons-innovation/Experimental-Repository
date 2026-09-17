@@ -33,7 +33,7 @@ class TestRealtimeConnectionManager:
 
         manager.connect(user_id, ws1)
         manager.connect(user_id, ws2)
-        
+
         conns = manager.get_connections(user_id)
         assert len(conns) == 2
         assert ws1 in conns

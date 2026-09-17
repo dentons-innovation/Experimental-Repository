@@ -7,9 +7,9 @@ from uuid import uuid4
 
 import pytest
 
-from app.domain.enums import ActivityAction, TaskPriority, TaskStatus
+from app.domain.enums import TaskPriority, TaskStatus
 from app.domain.exceptions import NotFoundError, OptimisticLockError
-from app.domain.models import ActivityLog, Label, Project, Task
+from app.domain.models import Project, Task
 from app.infrastructure.realtime.publisher import NoOpEventPublisher
 from app.repositories.task_repository import TaskFilters
 from app.services.task_service import TaskService
@@ -265,7 +265,6 @@ class TestTaskLabels:
 
 class TestListTasks:
     async def test_list_tasks_success(self):
-        from app.repositories.task_repository import TaskFilters
 
         task = _make_task()
         svc = _make_service(task=task)

@@ -1,7 +1,5 @@
 """API tests for the connections endpoints."""
 
-from uuid import uuid4
-
 import pytest
 from httpx import AsyncClient
 
@@ -12,9 +10,7 @@ from tests.conftest import create_user
 
 @pytest.fixture
 async def target_user(db_session) -> User:
-    return await create_user(
-        db_session, "target", "target@test.com", "Target User"
-    )
+    return await create_user(db_session, "target", "target@test.com", "Target User")
 
 
 @pytest.mark.asyncio
@@ -24,9 +20,7 @@ class TestSearchUsers:
         api_client: AsyncClient,
         target_user: User,
     ):
-        response = await api_client.get(
-            "/api/v1/connections/users/search?q=target"
-        )
+        response = await api_client.get("/api/v1/connections/users/search?q=target")
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 1
@@ -80,9 +74,7 @@ class TestAcceptConnection:
         await db_session.commit()
         await db_session.refresh(conn)
 
-        response = await api_client.post(
-            f"/api/v1/connections/{conn.id}/accept"
-        )
+        response = await api_client.post(f"/api/v1/connections/{conn.id}/accept")
         assert response.status_code == 200
         assert response.json()["status"] == "accepted"
 
@@ -107,9 +99,7 @@ class TestRejectConnection:
         await db_session.commit()
         await db_session.refresh(conn)
 
-        response = await api_client.post(
-            f"/api/v1/connections/{conn.id}/reject"
-        )
+        response = await api_client.post(f"/api/v1/connections/{conn.id}/reject")
         assert response.status_code == 204
 
 
@@ -132,7 +122,5 @@ class TestRemoveConnection:
         await db_session.commit()
         await db_session.refresh(conn)
 
-        response = await api_client.delete(
-            f"/api/v1/connections/{conn.id}"
-        )
+        response = await api_client.delete(f"/api/v1/connections/{conn.id}")
         assert response.status_code == 204

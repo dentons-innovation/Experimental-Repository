@@ -13,7 +13,7 @@ from app.domain.exceptions import (
     NotFoundError,
     ValidationError,
 )
-from app.domain.models import UserConnection
+from app.domain.models import User, UserConnection
 from app.infrastructure.realtime.publisher import RealtimeEventPublisher
 from app.infrastructure.realtime.types import RealtimeEvent
 from app.repositories.connection_repository import ConnectionRepository
@@ -43,7 +43,7 @@ class ConnectionService:
         user_id: UUID,
         offset: int = 0,
         limit: int = 20,
-    ) -> tuple[list, int]:
+    ) -> tuple[list[User], int]:
         """Paginated user search, excluding the searching user."""
         if not query or not query.strip():
             return [], 0
@@ -58,9 +58,7 @@ class ConnectionService:
     # Connection lifecycle
     # ─────────────────────────────────────────────────────────
 
-    async def send_request(
-        self, sender_id: UUID, receiver_id: UUID
-    ) -> UserConnection:
+    async def send_request(self, sender_id: UUID, receiver_id: UUID) -> UserConnection:
         """Send a connection/friend request.
 
         Validates:
@@ -122,7 +120,9 @@ class ConnectionService:
         # Only the receiver can accept
         receiver_id = self._get_receiver_id(connection)
         if user_id != receiver_id:
-            raise AuthorizationError("Only the receiver can accept a connection request")
+            raise AuthorizationError(
+                "Only the receiver can accept a connection request"
+            )
 
         updated = await self._conn_repo.update_status(
             connection_id, ConnectionStatus.ACCEPTED
@@ -142,9 +142,7 @@ class ConnectionService:
 
         return updated
 
-    async def reject_request(
-        self, user_id: UUID, connection_id: UUID
-    ) -> None:
+    async def reject_request(self, user_id: UUID, connection_id: UUID) -> None:
         """Reject a pending connection request.
 
         Only the receiver can reject.
@@ -158,15 +156,13 @@ class ConnectionService:
 
         receiver_id = self._get_receiver_id(connection)
         if user_id != receiver_id:
-            raise AuthorizationError("Only the receiver can reject a connection request")
+            raise AuthorizationError(
+                "Only the receiver can reject a connection request"
+            )
 
-        await self._conn_repo.update_status(
-            connection_id, ConnectionStatus.REJECTED
-        )
+        await self._conn_repo.update_status(connection_id, ConnectionStatus.REJECTED)
 
-    async def remove_connection(
-        self, user_id: UUID, connection_id: UUID
-    ) -> None:
+    async def remove_connection(self, user_id: UUID, connection_id: UUID) -> None:
         """Remove an accepted connection or cancel a pending request.
 
         Either party can remove/cancel.

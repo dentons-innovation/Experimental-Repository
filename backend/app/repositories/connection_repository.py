@@ -26,9 +26,7 @@ class ConnectionRepository(BaseRepository[UserConnection]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session)
 
-    async def get_between(
-        self, user_a: UUID, user_b: UUID
-    ) -> UserConnection | None:
+    async def get_between(self, user_a: UUID, user_b: UUID) -> UserConnection | None:
         """Find the connection between two users (auto-canonicalizes)."""
         lo, hi = _canonical_pair(user_a, user_b)
         result = await self.session.execute(
