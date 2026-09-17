@@ -218,3 +218,82 @@ class TestTaskActivity:
         resp = await api_client.get(f"/api/v1/tasks/{task['id']}/activity")
         actions = [a["action"] for a in resp.json()["items"]]
         assert "status_changed" in actions
+
+
+class TestTaskGet:
+    async def test_get_existing_task_success(
+        self, api_client: AsyncClient, workspace_and_project
+    ):
+        _, proj = workspace_and_project
+        created = (
+            await api_client.post(
+                f"/api/v1/projects/{proj['id']}/tasks",
+                json={"title": "Fetchable task"},
+            )
+        ).json()
+        resp = await api_client.get(f"/api/v1/tasks/{created['id']}")
+        assert resp.status_code == 200
+        assert resp.json()["id"] == created["id"]
+
+
+class TestTaskLabelsApi:
+    async def test_add_and_remove_label_from_task(
+        self, api_client: AsyncClient, workspace_and_project
+    ):
+        ws, proj = workspace_and_project
+        label = (
+            await api_client.post(
+                f"/api/v1/workspaces/{ws['id']}/labels",
+                json={"name": "Frontend", "color": "#3b82f6"},
+            )
+        ).json()
+
+        task = (
+            await api_client.post(
+                f"/api/v1/projects/{proj['id']}/tasks",
+                json={"title": "Task with label"},
+            )
+        ).json()
+
+        # Add label
+        add_resp = await api_client.post(
+            f"/api/v1/tasks/{task['id']}/labels",
+            json={"label_id": label["id"]},
+        )
+        assert add_resp.status_code == 200
+        assert any(l["id"] == label["id"] for l in add_resp.json()["labels"])
+
+        # Filter by label
+        filter_resp = await api_client.get(
+            f"/api/v1/projects/{proj['id']}/tasks?label_ids={label['id']}"
+        )
+        assert filter_resp.status_code == 200
+        assert filter_resp.json()["total"] == 1
+
+        # Remove label
+        del_resp = await api_client.delete(
+            f"/api/v1/tasks/{task['id']}/labels/{label['id']}"
+        )
+        assert del_resp.status_code == 200
+        assert not any(l["id"] == label["id"] for l in del_resp.json()["labels"])
+
+
+class TestTaskListAdvancedFilters:
+    async def test_filter_and_sort(
+        self, api_client: AsyncClient, workspace_and_project
+    ):
+        _, proj = workspace_and_project
+        await api_client.post(
+            f"/api/v1/projects/{proj['id']}/tasks",
+            json={"title": "Task A", "priority": "low"},
+        )
+        await api_client.post(
+            f"/api/v1/projects/{proj['id']}/tasks",
+            json={"title": "Task B", "priority": "high"},
+        )
+
+        resp = await api_client.get(
+            f"/api/v1/projects/{proj['id']}/tasks?sort_by=priority&sort_order=asc"
+        )
+        assert resp.status_code == 200
+        assert resp.json()["total"] >= 2
