@@ -35,8 +35,12 @@ def _make_service(
     proj_repo.get_member = AsyncMock(return_value=existing_member)
     proj_repo.add_member = AsyncMock(return_value=MagicMock(spec=ProjectMember))
     proj_repo.remove_member = AsyncMock()
-    proj_repo.list_for_workspace = AsyncMock(return_value=([project] if project else [], 1 if project else 0))
-    proj_repo.list_members = AsyncMock(return_value=[existing_member] if existing_member else [])
+    proj_repo.list_for_workspace = AsyncMock(
+        return_value=([project] if project else [], 1 if project else 0)
+    )
+    proj_repo.list_members = AsyncMock(
+        return_value=[existing_member] if existing_member else []
+    )
     proj_repo.delete = AsyncMock()
     proj_repo.session = MagicMock()
     proj_repo.session.add = MagicMock()
@@ -76,7 +80,9 @@ class TestCreateProject:
         assert project.name == "Sprint 1"
         assert project.slug == "sprint-1"
         svc._proj_repo.session.add.assert_called_once()
-        svc._proj_repo.add_member.assert_called_once_with(project.id, creator_id, ProjectRole.ADMIN)
+        svc._proj_repo.add_member.assert_called_once_with(
+            project.id, creator_id, ProjectRole.ADMIN
+        )
 
     async def test_create_project_slug_collision_raises_conflict(self):
         existing = _make_project()
@@ -143,7 +149,9 @@ class TestProjectMembers:
 
         requester_id = uuid4()
         await svc.add_member(p.id, requester_id, target.id, ProjectRole.MEMBER)
-        svc._proj_repo.add_member.assert_called_once_with(p.id, target.id, ProjectRole.MEMBER)
+        svc._proj_repo.add_member.assert_called_once_with(
+            p.id, target.id, ProjectRole.MEMBER
+        )
 
     async def test_add_member_missing_project_raises_404(self):
         svc = _make_service(project=None)

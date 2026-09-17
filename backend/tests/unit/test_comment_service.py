@@ -28,7 +28,9 @@ def _make_service(
 ) -> CommentService:
     comment_repo = MagicMock()
     comment_repo.get_by_id_with_author = AsyncMock(return_value=comment)
-    comment_repo.list_for_task = AsyncMock(return_value=([comment] if comment else [], 1 if comment else 0))
+    comment_repo.list_for_task = AsyncMock(
+        return_value=([comment] if comment else [], 1 if comment else 0)
+    )
     comment_repo.delete = AsyncMock()
     comment_repo.session = MagicMock()
     comment_repo.session.add = MagicMock()

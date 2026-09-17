@@ -228,6 +228,7 @@ class TaskService:
             action=ActivityAction.LABEL_ADDED,
             new_value=str(label_id),
         )
+        self._task_repo.session.expire(task)
         loaded = await self._task_repo.get_by_id_with_details(task_id)
         assert loaded is not None
         return loaded
@@ -246,6 +247,7 @@ class TaskService:
             action=ActivityAction.LABEL_REMOVED,
             old_value=str(label_id),
         )
+        self._task_repo.session.expire(task)
         loaded = await self._task_repo.get_by_id_with_details(task_id)
         assert loaded is not None
         return loaded

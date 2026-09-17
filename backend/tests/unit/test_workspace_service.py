@@ -35,8 +35,12 @@ def _make_service(
     ws_repo.get_member = AsyncMock(return_value=existing_member)
     ws_repo.add_member = AsyncMock(return_value=MagicMock(spec=WorkspaceMember))
     ws_repo.remove_member = AsyncMock()
-    ws_repo.list_for_user = AsyncMock(return_value=([workspace] if workspace else [], 1 if workspace else 0))
-    ws_repo.list_members = AsyncMock(return_value=[existing_member] if existing_member else [])
+    ws_repo.list_for_user = AsyncMock(
+        return_value=([workspace] if workspace else [], 1 if workspace else 0)
+    )
+    ws_repo.list_members = AsyncMock(
+        return_value=[existing_member] if existing_member else []
+    )
     ws_repo.delete = AsyncMock()
     ws_repo.session = MagicMock()
     ws_repo.session.add = MagicMock()
@@ -76,7 +80,9 @@ class TestCreateWorkspace:
         assert ws.name == "New Team"
         assert ws.slug == "new-team"
         svc._ws_repo.session.add.assert_called_once()
-        svc._ws_repo.add_member.assert_called_once_with(ws.id, owner_id, WorkspaceRole.OWNER)
+        svc._ws_repo.add_member.assert_called_once_with(
+            ws.id, owner_id, WorkspaceRole.OWNER
+        )
 
     async def test_create_workspace_empty_slug_fallback(self):
         svc = _make_service(existing_slug_workspace=None)
@@ -151,7 +157,9 @@ class TestWorkspaceMembers:
         ws_id = uuid4()
         owner_id = uuid4()
         await svc.add_member(ws_id, owner_id, target_user.id, WorkspaceRole.MEMBER)
-        svc._ws_repo.add_member.assert_called_once_with(ws_id, target_user.id, WorkspaceRole.MEMBER)
+        svc._ws_repo.add_member.assert_called_once_with(
+            ws_id, target_user.id, WorkspaceRole.MEMBER
+        )
 
     async def test_add_member_missing_user_raises_404(self):
         svc = _make_service(target_user=None)

@@ -78,8 +78,12 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         member = WorkspaceMember(workspace_id=workspace_id, user_id=user_id, role=role)
         self.session.add(member)
         await self.session.flush()
-        await self.session.refresh(member)
-        return member
+        result = await self.session.execute(
+            select(WorkspaceMember)
+            .where(WorkspaceMember.id == member.id)
+            .options(selectinload(WorkspaceMember.user))
+        )
+        return result.scalar_one()
 
     async def remove_member(self, member: WorkspaceMember) -> None:
         await self.session.delete(member)

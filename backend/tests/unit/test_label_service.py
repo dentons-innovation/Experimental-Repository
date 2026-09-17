@@ -71,7 +71,9 @@ class TestLabelService:
     async def test_update_label_success(self):
         label = _make_label()
         svc = _make_service(label=label, existing_by_name=None)
-        result = await svc.update_label(label.id, uuid4(), name="Defect", color="#000000")
+        result = await svc.update_label(
+            label.id, uuid4(), name="Defect", color="#000000"
+        )
         assert result.name == "Defect"
         assert result.color == "#000000"
 

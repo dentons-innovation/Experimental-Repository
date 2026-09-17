@@ -83,8 +83,12 @@ class ProjectRepository(BaseRepository[Project]):
         member = ProjectMember(project_id=project_id, user_id=user_id, role=role)
         self.session.add(member)
         await self.session.flush()
-        await self.session.refresh(member)
-        return member
+        result = await self.session.execute(
+            select(ProjectMember)
+            .where(ProjectMember.id == member.id)
+            .options(selectinload(ProjectMember.user))
+        )
+        return result.scalar_one()
 
     async def remove_member(self, member: ProjectMember) -> None:
         await self.session.delete(member)

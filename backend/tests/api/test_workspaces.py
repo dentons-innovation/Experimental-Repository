@@ -166,7 +166,7 @@ class TestWorkspaceMembers:
             json={"user_id": colleague_id, "role": "member"},
         )
         assert add_resp.status_code == 201
-        assert add_resp.json()["user_id"] == colleague_id
+        assert add_resp.json()["user"]["id"] == colleague_id
 
         del_resp = await api_client.delete(
             f"/api/v1/workspaces/{ws['id']}/members/{colleague_id}"

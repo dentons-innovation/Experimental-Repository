@@ -261,7 +261,7 @@ class TestTaskLabelsApi:
             json={"label_id": label["id"]},
         )
         assert add_resp.status_code == 200
-        assert any(l["id"] == label["id"] for l in add_resp.json()["labels"])
+        assert any(lbl["id"] == label["id"] for lbl in add_resp.json()["labels"])
 
         # Filter by label
         filter_resp = await api_client.get(
@@ -275,7 +275,7 @@ class TestTaskLabelsApi:
             f"/api/v1/tasks/{task['id']}/labels/{label['id']}"
         )
         assert del_resp.status_code == 200
-        assert not any(l["id"] == label["id"] for l in del_resp.json()["labels"])
+        assert not any(lbl["id"] == label["id"] for lbl in del_resp.json()["labels"])
 
 
 class TestTaskListAdvancedFilters:

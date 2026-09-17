@@ -10,7 +10,11 @@ import pytest
 from fastapi import HTTPException
 
 from app.core.config import get_settings
-from app.core.dependencies import PaginationParams, get_current_user, get_current_user_id
+from app.core.dependencies import (
+    PaginationParams,
+    get_current_user,
+    get_current_user_id,
+)
 from app.domain.exceptions import AuthenticationError
 from app.domain.models import User
 from app.infrastructure.auth import (
@@ -87,7 +91,9 @@ class TestJWTToken:
 
         s = get_settings()
         # Encode token without "sub" claim
-        token = jwt.encode({"email": "nosub@example.com"}, s.jwt_secret_key, algorithm=s.jwt_algorithm)
+        token = jwt.encode(
+            {"email": "nosub@example.com"}, s.jwt_secret_key, algorithm=s.jwt_algorithm
+        )
         verifier = JWTVerifier(s)
         with pytest.raises(AuthenticationError) as exc_info:
             verifier.verify(token)
@@ -116,7 +122,9 @@ class TestDependencies:
     async def test_get_current_user_id_invalid_scheme_raises_401(self):
         verifier = MagicMock()
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user_id(authorization="Basic token", jwt_verifier=verifier)
+            await get_current_user_id(
+                authorization="Basic token", jwt_verifier=verifier
+            )
         assert exc_info.value.status_code == 401
         assert "Expected: Bearer" in exc_info.value.detail
 
@@ -124,7 +132,9 @@ class TestDependencies:
         verifier = MagicMock()
         verifier.verify.side_effect = AuthenticationError("Invalid signature")
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user_id(authorization="Bearer bad-token", jwt_verifier=verifier)
+            await get_current_user_id(
+                authorization="Bearer bad-token", jwt_verifier=verifier
+            )
         assert exc_info.value.status_code == 401
 
     async def test_get_current_user_success(self):
@@ -138,7 +148,10 @@ class TestDependencies:
         with pytest.MonkeyPatch.context() as mp:
             user_repo_mock = MagicMock()
             user_repo_mock.get_by_id = AsyncMock(return_value=user)
-            mp.setattr("app.repositories.user_repository.UserRepository", lambda s: user_repo_mock)
+            mp.setattr(
+                "app.repositories.user_repository.UserRepository",
+                lambda s: user_repo_mock,
+            )
 
             res = await get_current_user(user_id=user_id, session=session)
             assert res == user
@@ -149,7 +162,10 @@ class TestDependencies:
         with pytest.MonkeyPatch.context() as mp:
             user_repo_mock = MagicMock()
             user_repo_mock.get_by_id = AsyncMock(return_value=None)
-            mp.setattr("app.repositories.user_repository.UserRepository", lambda s: user_repo_mock)
+            mp.setattr(
+                "app.repositories.user_repository.UserRepository",
+                lambda s: user_repo_mock,
+            )
 
             with pytest.raises(HTTPException) as exc_info:
                 await get_current_user(user_id=user_id, session=session)

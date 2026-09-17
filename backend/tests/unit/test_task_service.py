@@ -45,7 +45,9 @@ def _make_service(
     task_repo.update_with_version_check = AsyncMock(return_value=version_check_result)
     task_repo.add_label = AsyncMock()
     task_repo.remove_label = AsyncMock()
-    task_repo.list_for_project = AsyncMock(return_value=([task] if task else [], 1 if task else 0))
+    task_repo.list_for_project = AsyncMock(
+        return_value=([task] if task else [], 1 if task else 0)
+    )
     task_repo.session = MagicMock()
     task_repo.session.add = MagicMock()
     task_repo.session.flush = AsyncMock()
@@ -72,7 +74,9 @@ def _make_service(
 class TestCreateTask:
     async def test_create_task_success_with_labels(self):
         project = _make_project()
-        created_task = _make_task(project_id=project.id, workspace_id=project.workspace_id)
+        created_task = _make_task(
+            project_id=project.id, workspace_id=project.workspace_id
+        )
         svc = _make_service(task=created_task, project=project)
 
         label_id = uuid4()
