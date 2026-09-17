@@ -36,6 +36,9 @@ export const authApi = {
     apiClient.post("/auth/register", payload).then((r) => r.data),
 
   me: (): Promise<User> => apiClient.get("/auth/me").then((r) => r.data),
+
+  getWsTicket: (): Promise<string> =>
+    apiClient.post("/auth/ws-ticket").then((r) => r.data.ticket),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -56,8 +59,27 @@ export const connectionsApi = {
       .get("/connections/users/search", { params: { q: query } })
       .then((r) => r.data),
 
-  list: (): Promise<UserConnection[]> =>
-    apiClient.get("/connections").then((r) => r.data),
+  list: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<UserConnection>> =>
+    apiClient.get("/connections", { params }).then((r) => r.data),
+
+  listPendingIncoming: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<UserConnection>> =>
+    apiClient
+      .get("/connections/pending/incoming", { params })
+      .then((r) => r.data),
+
+  listPendingOutgoing: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<UserConnection>> =>
+    apiClient
+      .get("/connections/pending/outgoing", { params })
+      .then((r) => r.data),
 
   sendRequest: (receiverId: string): Promise<UserConnection> =>
     apiClient
@@ -119,6 +141,15 @@ export const workspacesApi = {
     apiClient
       .delete(`/workspaces/${workspaceId}/members/${userId}`)
       .then(() => undefined),
+
+  updateMemberRole: (
+    workspaceId: string,
+    userId: string,
+    payload: { role: string },
+  ): Promise<WorkspaceMember> =>
+    apiClient
+      .put(`/workspaces/${workspaceId}/members/${userId}`, payload)
+      .then((r) => r.data),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -167,6 +198,15 @@ export const projectsApi = {
     apiClient
       .delete(`/projects/${projectId}/members/${userId}`)
       .then(() => undefined),
+
+  updateMemberRole: (
+    projectId: string,
+    userId: string,
+    payload: { role: string },
+  ): Promise<ProjectMember> =>
+    apiClient
+      .put(`/projects/${projectId}/members/${userId}`, payload)
+      .then((r) => r.data),
 };
 
 // ─────────────────────────────────────────────────────────────

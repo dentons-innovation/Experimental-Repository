@@ -32,22 +32,8 @@ export function WorkspaceMembersPanel({ workspace }: { workspace: Workspace }) {
   });
 
   const changeRoleMutation = useMutation({
-    // Add logic for updateRole when available, for now assume addMember overrides role or similar,
-    // or we might need an explicit updateMemberRole in fetchers.
-    // The backend uses PUT /workspaces/{id}/members/{user_id}
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      // We can just use fetch directly or add it to workspacesApi
-      fetch(`/api/v1/workspaces/${workspace.id}/members/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("pf_auth_token")}`,
-        },
-        body: JSON.stringify({ role }),
-      }).then((res) => {
-        if (!res.ok) throw new Error("Failed to change role");
-        return res.json();
-      }),
+      workspacesApi.updateMemberRole(workspace.id, userId, { role }),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: queryKeys.workspaces.members(workspace.id),
@@ -209,8 +195,8 @@ function AddMemberModal({
   const { user } = useAuth();
 
   const { data: connections, isLoading } = useQuery({
-    queryKey: queryKeys.connections.all(),
-    queryFn: connectionsApi.list,
+    queryKey: queryKeys.connections.list(),
+    queryFn: () => connectionsApi.list(),
   });
 
   const addMutation = useMutation({
@@ -224,8 +210,7 @@ function AddMemberModal({
     },
   });
 
-  const activeConnections =
-    connections?.filter((c) => c.status === "accepted") || [];
+  const activeConnections = connections?.items || [];
   const availableUsers = activeConnections
     .map((c) => (c.user_lo_rel.id === user?.id ? c.user_hi_rel : c.user_lo_rel))
     .filter((u) => !existingMemberIds.includes(u.id));

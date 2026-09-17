@@ -87,3 +87,69 @@ async def test_websocket_message_handling():
     assert "Invalid JSON" in sent_messages[0]
     assert "Missing 'action' or 'channel'" in sent_messages[1]
     assert "unsubscribed" in sent_messages[2]
+
+
+@pytest.mark.asyncio
+async def test_websocket_subscribe_user_channel():
+    from unittest.mock import patch
+
+    user_id = uuid4()
+    token = create_access_token(
+        user_id=user_id, email="test@example.com", username="testuser"
+    )
+
+    mock_ws = AsyncMock()
+    mock_ws.query_params = {"token": token}
+    conn_manager = RealtimeConnectionManager()
+    sub_manager = RealtimeSubscriptionManager()
+    mock_ws.app.state.realtime_conn_manager = conn_manager
+    mock_ws.app.state.realtime_sub_manager = sub_manager
+    mock_ws.app.state.jwt_verifier = JWTVerifier(get_settings())
+
+    sent_messages: list[str] = []
+
+    async def fake_send_text(data: str):
+        sent_messages.append(data)
+
+    mock_ws.send_text = AsyncMock(side_effect=fake_send_text)
+    mock_ws.receive_text = AsyncMock(
+        side_effect=[
+            json.dumps({"action": "subscribe", "channel": f"user:{user_id}"}),
+            WebSocketDisconnect(code=1000),
+        ]
+    )
+
+    with patch(
+        "app.infrastructure.realtime.router._check_channel_authorization",
+        return_value=True,
+    ):
+        await websocket_endpoint(mock_ws)
+
+    assert len(sent_messages) == 1
+    resp = json.loads(sent_messages[0])
+    assert resp == {
+        "action": "subscribed",
+        "channel": f"user:{user_id}",
+    }
+
+
+@pytest.mark.asyncio
+async def test_websocket_connect_with_ticket():
+    user_id = uuid4()
+    ticket = create_access_token(
+        user_id=user_id, email="test@example.com", username="testuser"
+    )
+
+    mock_ws = AsyncMock()
+    mock_ws.query_params = {"ticket": ticket}
+    conn_manager = RealtimeConnectionManager()
+    sub_manager = RealtimeSubscriptionManager()
+    mock_ws.app.state.realtime_conn_manager = conn_manager
+    mock_ws.app.state.realtime_sub_manager = sub_manager
+    mock_ws.app.state.jwt_verifier = JWTVerifier(get_settings())
+    mock_ws.receive_text = AsyncMock(side_effect=WebSocketDisconnect(code=1000))
+
+    await websocket_endpoint(mock_ws)
+
+    mock_ws.accept.assert_called_once()
+    assert len(conn_manager.get_connections(user_id)) == 0

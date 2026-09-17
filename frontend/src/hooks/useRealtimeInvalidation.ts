@@ -29,6 +29,7 @@ export function useRealtimeInvalidation() {
             case "workspace.member_added":
             case "workspace.member_removed":
             case "workspace.member_updated":
+            case "workspace.member_role_changed":
               queryClient.invalidateQueries({
                 queryKey: queryKeys.workspaces.members(workspaceId),
               });
@@ -55,6 +56,7 @@ export function useRealtimeInvalidation() {
             case "project.member_added":
             case "project.member_removed":
             case "project.member_updated":
+            case "project.member_role_changed":
               queryClient.invalidateQueries({
                 queryKey: queryKeys.projects.members(projectId),
               });
@@ -71,10 +73,19 @@ export function useRealtimeInvalidation() {
               });
             }
           }
+
+          // Handle comment events broadcast to project channel
+          if (eventName.startsWith("comment.")) {
+            if (typeof data?.task_id === "string") {
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.comments.byTask(data.task_id),
+              });
+            }
+          }
         }
       }
 
-      // Handle comment events
+      // Handle comment events (direct task channel if subscribed)
       if (channel.startsWith("task:")) {
         const taskId = channel.split(":")[1];
         if (taskId && eventName.startsWith("comment.")) {
@@ -84,7 +95,7 @@ export function useRealtimeInvalidation() {
         }
       }
 
-      // Handle user events (connections)
+      // Handle user events (connections and personal membership changes)
       if (channel.startsWith("user:")) {
         if (eventName.startsWith("connection.")) {
           queryClient.invalidateQueries({
@@ -94,7 +105,9 @@ export function useRealtimeInvalidation() {
 
         if (
           eventName === "workspace.member_added" ||
-          eventName === "workspace.member_removed"
+          eventName === "workspace.member_removed" ||
+          eventName === "workspace.member_role_changed" ||
+          eventName === "workspace.member_updated"
         ) {
           queryClient.invalidateQueries({
             queryKey: queryKeys.workspaces.list(),
@@ -103,7 +116,9 @@ export function useRealtimeInvalidation() {
 
         if (
           eventName === "project.member_added" ||
-          eventName === "project.member_removed"
+          eventName === "project.member_removed" ||
+          eventName === "project.member_role_changed" ||
+          eventName === "project.member_updated"
         ) {
           queryClient.invalidateQueries({ queryKey: queryKeys.projects.all() });
         }

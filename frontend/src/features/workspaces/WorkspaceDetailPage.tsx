@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -21,6 +21,7 @@ import {
   Input,
   Textarea,
 } from "@/components/ui";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import { WorkspaceMembersPanel } from "./WorkspaceMembersPanel";
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -36,6 +37,16 @@ export function WorkspaceDetailPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { joinChannel, leaveChannel } = useWebSocket();
+
+  useEffect(() => {
+    if (workspaceId) {
+      joinChannel(`workspace:${workspaceId}`);
+      return () => {
+        leaveChannel(`workspace:${workspaceId}`);
+      };
+    }
+  }, [workspaceId, joinChannel, leaveChannel]);
 
   // Create project state
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from typing import Protocol, runtime_checkable
+from uuid import UUID
 
 import structlog
 
@@ -66,6 +67,28 @@ class InProcessEventPublisher:
             message=message,
             exclude_user_id=event.exclude_user_id,
         )
+
+        # Automatically revoke active subscriptions if a member was removed
+        if event.event_type == "project.member_removed" and event.payload:
+            user_id = event.payload.get("user_id")
+            project_id = event.payload.get("project_id")
+            if user_id and project_id:
+                try:
+                    self._sub_manager.unsubscribe_user_from_channel(
+                        f"project:{project_id}", UUID(str(user_id))
+                    )
+                except (ValueError, TypeError):
+                    pass
+        elif event.event_type == "workspace.member_removed" and event.payload:
+            user_id = event.payload.get("user_id")
+            workspace_id = event.payload.get("workspace_id")
+            if user_id and workspace_id:
+                try:
+                    self._sub_manager.unsubscribe_user_from_channel(
+                        f"workspace:{workspace_id}", UUID(str(user_id))
+                    )
+                except (ValueError, TypeError):
+                    pass
 
     async def publish_many(self, events: list[RealtimeEvent]) -> None:
         for event in events:

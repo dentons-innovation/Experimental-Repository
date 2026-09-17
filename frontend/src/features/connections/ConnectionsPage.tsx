@@ -29,12 +29,22 @@ export function ConnectionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const {
-    data: connections,
-    isLoading,
-    error,
+    data: connectionsData,
+    isLoading: isConnLoading,
+    error: connError,
   } = useQuery({
-    queryKey: queryKeys.connections.all(),
-    queryFn: connectionsApi.list,
+    queryKey: queryKeys.connections.list(),
+    queryFn: () => connectionsApi.list(),
+  });
+
+  const { data: incomingData, isLoading: isIncomingLoading } = useQuery({
+    queryKey: queryKeys.connections.pendingIncoming(),
+    queryFn: () => connectionsApi.listPendingIncoming(),
+  });
+
+  const { data: outgoingData, isLoading: isOutgoingLoading } = useQuery({
+    queryKey: queryKeys.connections.pendingOutgoing(),
+    queryFn: () => connectionsApi.listPendingOutgoing(),
   });
 
   const { data: searchResults, isLoading: isSearchLoading } = useQuery({
@@ -67,19 +77,15 @@ export function ConnectionsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.connections.all() }),
   });
 
+  const isLoading = isConnLoading || isIncomingLoading || isOutgoingLoading;
+  const error = connError;
+
   if (isLoading) return <LoadingSpinner fullPage />;
   if (error) return <ErrorMessage message={getApiErrorMessage(error)} />;
 
-  const activeConnections =
-    connections?.filter((c) => c.status === "accepted") || [];
-  const pendingIncoming =
-    connections?.filter(
-      (c) => c.status === "pending" && c.requester_id !== user?.id,
-    ) || [];
-  const pendingOutgoing =
-    connections?.filter(
-      (c) => c.status === "pending" && c.requester_id === user?.id,
-    ) || [];
+  const activeConnections = connectionsData?.items || [];
+  const pendingIncoming = incomingData?.items || [];
+  const pendingOutgoing = outgoingData?.items || [];
 
   return (
     <div>

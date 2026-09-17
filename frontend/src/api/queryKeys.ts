@@ -14,6 +14,9 @@ export const queryKeys = {
 
   connections: {
     all: () => ["connections"] as const,
+    list: () => ["connections", "list"] as const,
+    pendingIncoming: () => ["connections", "pending", "incoming"] as const,
+    pendingOutgoing: () => ["connections", "pending", "outgoing"] as const,
     pending: () => ["connections", "pending"] as const,
     active: () => ["connections", "active"] as const,
     search: (q: string) => ["connections", "search", q] as const,

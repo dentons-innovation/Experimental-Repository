@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { realtimeClient, RealtimeEvent } from "@/api/websocket";
+import { authApi } from "@/api/fetchers";
 
 interface WebSocketContextValue {
   subscribeToEvent: (listener: (event: RealtimeEvent) => void) => () => void;
@@ -21,6 +22,10 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const { token, isAuthenticated } = useAuth();
 
   useEffect(() => {
+    realtimeClient.setTicketFetcher(() => authApi.getWsTicket());
+  }, []);
+
+  useEffect(() => {
     if (isAuthenticated && token) {
       realtimeClient.setToken(token);
     } else {
@@ -34,15 +39,11 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, token]);
 
   const joinChannel = useCallback((channel: string) => {
-    // We send a JSON command to subscribe
-    // The websocket needs to be open, so we must queue it if not or the client handles it
-    // But since the RealtimeClient doesn't expose send() directly yet, let's expose it or add it.
-    // Let's assume RealtimeClient has a sendCommand method or similar.
-    realtimeClient.sendCommand({ action: "subscribe", channel });
+    realtimeClient.joinChannel(channel);
   }, []);
 
   const leaveChannel = useCallback((channel: string) => {
-    realtimeClient.sendCommand({ action: "unsubscribe", channel });
+    realtimeClient.leaveChannel(channel);
   }, []);
 
   const subscribeToEvent = useCallback(

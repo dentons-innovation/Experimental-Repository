@@ -92,7 +92,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     jwt_verifier: JWTVerifier = app.state.jwt_verifier
 
     # ── Authenticate ─────────────────────────────────────────
-    token = websocket.query_params.get("token")
+    token = websocket.query_params.get("ticket") or websocket.query_params.get("token")
     try:
         user_id = authenticate_ws_token(token, jwt_verifier)
     except AuthenticationError:

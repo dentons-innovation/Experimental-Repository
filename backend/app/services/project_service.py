@@ -231,6 +231,28 @@ class ProjectService:
         await self._proj_repo.session.flush()
         await self._proj_repo.session.refresh(member)
 
+        # Publish role change event
+        event_payload = {
+            "project_id": str(project_id),
+            "workspace_id": str(project.workspace_id),
+            "user_id": str(target_user_id),
+            "new_role": new_role.value,
+        }
+        await self._publisher.publish_many(
+            [
+                RealtimeEvent(
+                    channel=f"project:{project_id}",
+                    event_type="project.member_role_changed",
+                    payload=event_payload,
+                ),
+                RealtimeEvent(
+                    channel=f"user:{target_user_id}",
+                    event_type="project.member_role_changed",
+                    payload=event_payload,
+                ),
+            ]
+        )
+
         return member
 
     async def list_members(

@@ -33,17 +33,7 @@ export function ProjectMembersPanel({ project }: { project: Project }) {
 
   const changeRoleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      fetch(`/api/v1/projects/${project.id}/members/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("pf_auth_token")}`,
-        },
-        body: JSON.stringify({ role }),
-      }).then((res) => {
-        if (!res.ok) throw new Error("Failed to change role");
-        return res.json();
-      }),
+      projectsApi.updateMemberRole(project.id, userId, { role }),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.members(project.id),

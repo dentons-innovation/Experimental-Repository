@@ -100,6 +100,24 @@ class RealtimeSubscriptionManager:
             channel_count=len(channels),
         )
 
+    def unsubscribe_user_from_channel(self, channel: str, user_id: UUID) -> None:
+        """Revoke all subscriptions of a specific user to a channel across all their connections."""
+        subs = self._subscriptions.get(channel)
+        if subs:
+            matching = [(uid, ws) for uid, ws in subs if uid == user_id]
+            for uid, ws in matching:
+                subs.discard((uid, ws))
+                ws_chans = self._ws_channels.get(ws)
+                if ws_chans:
+                    ws_chans.discard(channel)
+            if not subs:
+                del self._subscriptions[channel]
+        logger.debug(
+            "ws_unsubscribed_user_from_channel",
+            user_id=str(user_id),
+            channel=channel,
+        )
+
     def get_subscribers(self, channel: str) -> set[tuple[UUID, WebSocket]]:
         return self._subscriptions.get(channel, set())
 

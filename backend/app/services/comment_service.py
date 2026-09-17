@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 from uuid import UUID
+
+from sqlalchemy import event as sa_event
+from sqlalchemy.orm import Session as SASession
 
 from app.domain.enums import ActivityAction
 from app.domain.exceptions import NotFoundError
@@ -13,6 +17,8 @@ from app.repositories.activity_repository import ActivityRepository
 from app.repositories.comment_repository import CommentRepository
 from app.repositories.task_repository import TaskRepository
 from app.services.authorization import AuthorizationService
+
+_background_tasks: set[asyncio.Task[None]] = set()
 
 
 class CommentService:
@@ -29,6 +35,26 @@ class CommentService:
         self._activity_repo = activity_repo
         self._auth = auth_service
         self._publisher = publisher
+
+    async def _publish_after_commit(self, event: RealtimeEvent) -> None:
+        session = getattr(self._comment_repo, "session", None)
+        sync_session = getattr(session, "sync_session", None)
+        if (
+            isinstance(sync_session, SASession)
+            and hasattr(sync_session, "is_active")
+            and sync_session.is_active
+        ):
+            loop = asyncio.get_running_loop()
+            pub = self._publisher
+
+            def _on_commit() -> None:
+                t = loop.create_task(pub.publish(event))
+                _background_tasks.add(t)
+                t.add_done_callback(_background_tasks.discard)
+
+            sa_event.listen(sync_session, "after_commit", _on_commit, once=True)
+        else:
+            await self._publisher.publish(event)
 
     async def create_comment(
         self, task_id: UUID, author_id: UUID, body: str
@@ -54,8 +80,8 @@ class CommentService:
         loaded = await self._comment_repo.get_by_id_with_author(comment.id)
         assert loaded is not None
 
-        # Publish event after successful DB operation
-        await self._publisher.publish(
+        # Publish event after successful DB commit
+        await self._publish_after_commit(
             RealtimeEvent(
                 channel=f"project:{task.project_id}",
                 event_type="comment.created",
@@ -108,8 +134,8 @@ class CommentService:
         loaded = await self._comment_repo.get_by_id_with_author(comment.id)
         assert loaded is not None
 
-        # Publish event after successful DB operation
-        await self._publisher.publish(
+        # Publish event after successful DB commit
+        await self._publish_after_commit(
             RealtimeEvent(
                 channel=f"project:{task.project_id}",
                 event_type="comment.updated",
@@ -143,8 +169,8 @@ class CommentService:
             action=ActivityAction.COMMENT_DELETED,
         )
 
-        # Publish event after successful DB operation
-        await self._publisher.publish(
+        # Publish event after successful DB commit
+        await self._publish_after_commit(
             RealtimeEvent(
                 channel=f"project:{task.project_id}",
                 event_type="comment.deleted",
