@@ -14,7 +14,9 @@ GitHub Actions workflows run on every pull request targeting `main` and on every
 | :--------------------- | :------------------------------------- | :-------------------------- | :-----------------: | :-------------------------- |
 | **Frontend CI**        | `.github/workflows/ci-frontend.yml`    | `Lint, Test, and Build`     |         Yes         | :white_check_mark: Enforced |
 | **Backend CI**         | `.github/workflows/ci-backend.yml`     | `Lint, Typecheck, and Test` |         Yes         | :white_check_mark: Enforced |
+| **Dependency Review**  | `.github/workflows/dependency-review.yml` | `Dependency Review`      | Recommended (Next)  | :white_check_mark: Active   |
 | **Container Security** | `.github/workflows/security-trivy.yml` | `Docker Build & Trivy Scan` |         No          | :warning: Experimental      |
+| **OpenSSF Scorecard**  | `.github/workflows/scorecard.yml`      | `Scorecard Analysis`        |         No          | :shield: Advisory           |
 
 ### Frontend CI (`.github/workflows/ci-frontend.yml`)
 
@@ -42,6 +44,17 @@ The backend workflow performs:
 
 > **Purpose**: Detects Python quality issues, type errors, application initialization failures, invalid database migrations, integration regressions, and test failures before merge.
 
+### Dependency Review (`.github/workflows/dependency-review.yml`)
+
+The Dependency Review workflow provides proactive supply-chain gating on pull requests targeting `main`:
+
+- **PR-Scoped Validation**: Runs GitHub's official `actions/dependency-review-action@v4` on pull request events.
+- **Vulnerability Blocking**: Configured with `fail-on-severity: high`, failing the check if a PR introduces direct or transitive dependencies containing known `HIGH` or `CRITICAL` vulnerabilities.
+- **Complements Dependabot**:
+  - *Dependabot* operates out-of-band on a schedule to detect and update existing dependencies across the repo.
+  - *Dependency Review* acts as an in-band PR gate to prevent new vulnerable packages or vulnerable transitive upgrades from entering `main`.
+- **Ruleset Recommendation**: Recommended to run as an active check and become a mandatory required status check in the GitHub ruleset after successful validation across initial PRs.
+
 ### Container Security Scan (`.github/workflows/security-trivy.yml`)
 
 The container security workflow performs:
@@ -52,6 +65,36 @@ The container security workflow performs:
 
 > [!WARNING]
 > This workflow is currently **experimental** and is not configured as a required merge check while container packaging is still being refined.
+
+### OpenSSF Scorecard (`.github/workflows/scorecard.yml`)
+
+The OpenSSF Scorecard workflow provides automated supply-chain security and repository hygiene evaluation:
+
+- **Official Reference Pattern**: Implements the official OpenSSF `ossf/scorecard-action@v2.4.4` reference workflow.
+- **Cadence & Execution**: Executes on pushes to `main` and on a weekly Monday schedule (`cron: '0 4 * * 1'`), as well as manual trigger (`workflow_dispatch`).
+- **Transparency & SARIF Integration**: Authenticates via GitHub OIDC (`id-token: write`) to publish scores (`publish_results: true`) and uploads findings as SARIF reports to GitHub Code Scanning (`github/codeql-action/upload-sarif@v3`).
+- **Hygiene Checks Evaluated**: Evaluates token permissions, dangerous workflow constructs, branch protection rulesets, dependency update tools, and pinned dependencies.
+- **Advisory Policy**: Scorecard runs strictly as an **advisory** audit tool and is never configured as a blocking merge check.
+
+### CI Optimization, Caching & Concurrency Architecture
+
+To minimize GitHub Actions execution duration and eliminate wasted runner minutes without weakening security controls, all workflows implement the following engineering practices:
+
+1. **Workflow Concurrency (`cancel-in-progress: true`)**:
+   - Each workflow defines `concurrency: group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true`.
+   - When a developer pushes a new commit to an active PR branch, any existing in-flight run for that branch is immediately terminated, freeing runner capacity and eliminating duplicate runs.
+
+2. **Deterministic Package Caching**:
+   - **Frontend**: Cached via `actions/setup-node@v4` with `cache: 'npm'` keyed to `./frontend/package-lock.json`. This caches the global npm package download store (`~/.npm`) while executing a strict `npm ci` install every run.
+   - **Backend**: Cached via `actions/setup-python@v5` with `cache: 'pip'` keyed to both `./backend/requirements.txt` and `./backend/requirements-dev.txt`. This caches pip wheels in `~/.cache/pip` while creating a fresh virtual environment per run.
+   - **Security Guarantee**: `node_modules` and Python virtual environments (`.venv`) are **never cached directly**. Direct filesystem caching of executable directories across PRs risks cache poisoning and nondeterministic builds.
+
+3. **Least-Privilege Permissions**:
+   - Workflows explicitly declare minimal permissions (`permissions: contents: read` by default). Elevated permissions (`security-events: write`, `id-token: write`) are strictly restricted to the specific Scorecard job requiring SARIF upload and OIDC exchange.
+
+4. **Preservation of Required Check Names & Avoidance of Path Filtering**:
+   - The job names `Lint, Test, and Build` and `Lint, Typecheck, and Test` are preserved verbatim to maintain branch protection continuity.
+   - Aggressive path filtering (`paths: ['backend/**']`) is intentionally omitted from required checks to prevent checks from entering permanent pending or missing states on cross-cutting or documentation-only pull requests.
 
 ### CodeQL
 
@@ -173,13 +216,15 @@ Create a branch ruleset targeting the default branch (`main`):
 
 ### Required vs. Advisory Checks
 
-| Check Name                  | Source Workflow          | Policy                              |
-| :-------------------------- | :----------------------- | :---------------------------------- |
-| `Lint, Test, and Build`     | Frontend CI              | **Required** :white_check_mark:     |
-| `Lint, Typecheck, and Test` | Backend CI               | **Required** :white_check_mark:     |
-| `CodeQL`                    | GitHub Advanced Security | **Required** _(enable once stable)_ |
-| `Docker Build & Trivy Scan` | Container Security       | Advisory _(experimental)_           |
-| `Greptile Review`           | Greptile AI              | Advisory                            |
+| Check Name                  | Source Workflow          | Policy                              | Description |
+| :-------------------------- | :----------------------- | :---------------------------------- | :---------- |
+| `Lint, Test, and Build`     | Frontend CI              | **Required** :white_check_mark:     | Formats, lints, type-checks, tests (Vitest), and builds frontend. |
+| `Lint, Typecheck, and Test` | Backend CI               | **Required** :white_check_mark:     | Formats, lints, type-checks (Mypy), migrates, and tests (85% cov). |
+| `Dependency Review`         | Dependency Review        | Advisory :warning: *(Recommend Required)* | Blocks PRs introducing dependencies with HIGH/CRITICAL vulnerabilities. |
+| `CodeQL`                    | GitHub Advanced Security | **Required** _(enable once stable)_ | Semantic data-flow and static application security analysis. |
+| `Docker Build & Trivy Scan` | Container Security       | Advisory _(experimental)_           | Scans container packaging for base image & package CVEs. |
+| `Scorecard Analysis`        | OpenSSF Scorecard        | Advisory _(supply-chain audit)_     | Automated repository supply chain hygiene and security scorecard. |
+| `Greptile Review`           | Greptile AI              | Advisory                            | Architectural, cross-file, and contract review. |
 
 ---
 
@@ -201,8 +246,9 @@ Create a branch ruleset targeting the default branch (`main`):
               ▼                           ▼
 ┌───────────────────────────┐ ┌──────────────────────────┐
 │  Deterministic CI Checks  │ │   Security & AI Review   │
-│  • Frontend Build & Test  │ │   • Trivy Container Scan │
-│  • Backend Test & Type    │ │   • Greptile AI Review   │
+│  • Frontend Build & Test  │ │   • Dependency Review    │
+│  • Backend Test & Type    │ │   • Trivy Container Scan │
+│                           │ │   • Greptile AI Review   │
 └─────────────┬─────────────┘ └───────────┬──────────────┘
               │                           │
               └─────────────┬─────────────┘
@@ -222,6 +268,7 @@ Create a branch ruleset targeting the default branch (`main`):
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │                      Merged to main                    │
+│    (Triggers OpenSSF Scorecard & Trivy on main)        │
 └────────────────────────────────────────────────────────┘
 ```
 
